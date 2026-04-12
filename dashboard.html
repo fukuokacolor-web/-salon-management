@@ -113,6 +113,14 @@
     return `<span class="badge ${cls}">${status || '未送信'}</span>`;
   }
 
+  function planBadge(r) {
+    if (r.plan === '回数コース') {
+      const color = r.courseRemaining <= 2 ? '#B71C1C' : r.courseRemaining <= 4 ? '#E65100' : '#2E7D4F';
+      return `<span style="display:inline-flex;align-items:center;gap:4px;background:#f0f8ff;border:1px solid #b3d9f7;color:#1565C0;border-radius:20px;padding:2px 10px;font-size:0.8rem;font-weight:600;">🎟 <span style="background:${color};color:#fff;border-radius:10px;padding:1px 7px;font-size:0.78rem;">残${r.courseRemaining}回</span></span>`;
+    }
+    return `<span style="background:#f5f5f5;border:1px solid #ddd;color:#999;border-radius:20px;padding:2px 10px;font-size:0.8rem;">都度払い</span>`;
+  }
+
   async function loadDashboard() {
     const data = await getDashboard();
     if (!data) return;
@@ -142,6 +150,7 @@
               <th>時間</th>
               <th>お客様名</th>
               <th>メニュー</th>
+              <th>残回数</th>
               <th>電話番号</th>
               <th>ステータス</th>
               <th>操作</th>
@@ -153,6 +162,7 @@
                 <td><strong>${r.time}</strong></td>
                 <td>${r.name} 様</td>
                 <td>${r.menu}</td>
+                <td>${planBadge(r)}</td>
                 <td>${r.phone || '—'}</td>
                 <td>${statusBadge(r.status)}</td>
                 <td>
