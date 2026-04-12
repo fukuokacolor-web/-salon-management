@@ -80,3 +80,8 @@ async function getMenuPoints() {
 async function saveMenuPoints(menuPoints) {
   return apiGet('saveMenuPoints', { menuPoints: JSON.stringify(menuPoints) });
 }
+
+/** プラン設定（都度払い / 回数コース） */
+async function setPlan(customerId, plan, courseTotal) {
+  return apiGet('setPlan', { customerId, plan, courseTotal: String(courseTotal || '') });
+}

@@ -62,6 +62,50 @@
       line-height: 1;
     }
     .point-label { color: var(--text-light); font-size: 0.82rem; margin-top: 4px; }
+    .plan-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px 28px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .plan-label { font-size: 0.82rem; color: var(--text-light); margin-bottom: 4px; }
+    .plan-type  { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .course-bar-wrap { flex: 1; min-width: 180px; }
+    .course-bar-track {
+      background: #eee; border-radius: 99px; height: 10px; overflow: hidden; margin: 6px 0;
+    }
+    .course-bar-fill {
+      height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, var(--gold-dark), #e8c96a);
+      transition: width 0.4s ease;
+    }
+    .course-nums { font-size: 0.85rem; color: var(--text-light); }
+    .course-remaining-big {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem; font-weight: 700; line-height: 1;
+    }
+    /* モーダル */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 1000;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff; border-radius: var(--radius-lg);
+      padding: 32px; width: 360px; max-width: 90vw;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+    .modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; }
+    .radio-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+    .radio-group label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.95rem; }
+    .select-course { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.95rem; margin-bottom: 18px; }
+    .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
   </style>
 </head>
 <body>
@@ -109,6 +153,9 @@
         <div class="loading"><div class="spinner"></div> 読み込み中...</div>
       </div>
 
+      <!-- プランカード -->
+      <div id="planCard"></div>
+
       <!-- 来店記録 -->
       <div class="card">
         <div class="card-title">📅 来店記録</div>
@@ -120,12 +167,122 @@
   </div>
 </div>
 
+<!-- プラン設定モーダル -->
+<div class="modal-overlay" id="planModal">
+  <div class="modal-box">
+    <div class="modal-title">🎟 プランを設定</div>
+    <div class="radio-group">
+      <label><input type="radio" name="planType" value="都度払い" onchange="onPlanTypeChange()"> 都度払い（単発）</label>
+      <label><input type="radio" name="planType" value="回数コース" onchange="onPlanTypeChange()"> 回数コース</label>
+    </div>
+    <div id="courseSelectWrap" style="display:none;">
+      <select class="select-course" id="courseTotal">
+        <option value="10">10回コース</option>
+        <option value="12">12回コース</option>
+        <option value="15">15回コース</option>
+      </select>
+      <p style="font-size:0.82rem;color:var(--text-light);margin-bottom:12px;">
+        ※ 残回数はコース回数にリセットされます
+      </p>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closePlanModal()">キャンセル</button>
+      <button class="btn btn-gold" onclick="savePlan()">保存する</button>
+    </div>
+  </div>
+</div>
+
 <script>
   checkAuth();
   document.getElementById('salonNameSidebar').textContent = SALON_NAME;
 
   const params     = new URLSearchParams(location.search);
   const customerId = params.get('id') || '';
+  let currentCustomer = null;
+
+  // ─── プランカード描画 ─────────────────────────────────────
+  function renderPlanCard(c) {
+    const plan      = c.plan || '都度払い';
+    const isCourse  = plan === '回数コース';
+    const remaining = c.courseRemaining || 0;
+    const total     = c.courseTotal     || 0;
+    const pct       = total > 0 ? Math.round((remaining / total) * 100) : 0;
+    const barColor  = remaining <= 2 ? '#B71C1C' : remaining <= 4 ? '#E65100' : 'var(--gold-dark)';
+    const remColor  = remaining <= 2 ? '#B71C1C' : remaining <= 4 ? '#E65100' : '#1565C0';
+
+    const courseHtml = isCourse ? `
+      <div class="course-bar-wrap">
+        <div class="course-nums">${total}回コース</div>
+        <div class="course-bar-track">
+          <div class="course-bar-fill" style="width:${pct}%;background:${barColor};"></div>
+        </div>
+        <div class="course-nums">残 ${remaining} / ${total} 回</div>
+      </div>
+      <div style="text-align:center;min-width:80px;">
+        <div class="course-remaining-big" style="color:${remColor};">${remaining}</div>
+        <div style="font-size:0.8rem;color:var(--text-light);">残回数</div>
+      </div>` : `
+      <div style="color:var(--text-light);font-size:0.88rem;">来店ごとに都度お支払いのプランです。</div>`;
+
+    document.getElementById('planCard').innerHTML = `
+      <div class="plan-card">
+        <div style="min-width:120px;">
+          <div class="plan-label">現在のプラン</div>
+          <div class="plan-type">${isCourse ? '🎟 回数コース' : '💳 都度払い'}</div>
+        </div>
+        ${courseHtml}
+        <div style="margin-left:auto;">
+          <button class="btn btn-outline" onclick="openPlanModal()">プランを変更</button>
+        </div>
+      </div>`;
+  }
+
+  // ─── モーダル制御 ────────────────────────────────────────
+  function openPlanModal() {
+    const plan = currentCustomer?.plan || '都度払い';
+    document.querySelectorAll('input[name="planType"]').forEach(r => {
+      r.checked = (r.value === plan);
+    });
+    document.getElementById('courseTotal').value =
+      currentCustomer?.courseTotal ? String(currentCustomer.courseTotal) : '10';
+    document.getElementById('courseSelectWrap').style.display =
+      plan === '回数コース' ? 'block' : 'none';
+    document.getElementById('planModal').classList.add('open');
+  }
+
+  function closePlanModal() {
+    document.getElementById('planModal').classList.remove('open');
+  }
+
+  function onPlanTypeChange() {
+    const val = document.querySelector('input[name="planType"]:checked')?.value;
+    document.getElementById('courseSelectWrap').style.display =
+      val === '回数コース' ? 'block' : 'none';
+  }
+
+  async function savePlan() {
+    const plan   = document.querySelector('input[name="planType"]:checked')?.value;
+    const total  = document.getElementById('courseTotal').value;
+    if (!plan) return;
+
+    const btn = document.querySelector('#planModal .btn-gold');
+    btn.disabled = true; btn.textContent = '保存中...';
+
+    const res = await setPlan(customerId, plan, plan === '回数コース' ? total : '');
+    btn.disabled = false; btn.textContent = '保存する';
+
+    if (res && res.success) {
+      closePlanModal();
+      loadDetail(); // 再読み込みで反映
+    } else {
+      alert('保存に失敗しました: ' + (res?.message || ''));
+    }
+  }
+
+  // モーダル外クリックで閉じる
+  document.getElementById('planModal').addEventListener('click', function(e) {
+    if (e.target === this) closePlanModal();
+  });
 
   function formatDate(val) {
     if (!val) return '<span style="color:#bbb">未記録</span>';
@@ -152,6 +309,7 @@
 
     const c = data.customer;
     document.title = c.name + ' - ' + SALON_NAME;
+    currentCustomer = c;
 
     // 顧客カード描画
     document.getElementById('customerCard').innerHTML = `
@@ -169,6 +327,9 @@
           <div class="point-label">保有ポイント (pt)</div>
         </div>
       </div>`;
+
+    // プランカード描画
+    renderPlanCard(c);
 
     // 来店記録描画
     const visEl = document.getElementById('visitContent');

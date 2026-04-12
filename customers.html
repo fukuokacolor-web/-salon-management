@@ -83,6 +83,18 @@
 
   let allCustomers = [];
 
+  function planBadge(c) {
+    if (c.plan === '回数コース') {
+      const pct = c.courseTotal > 0 ? Math.round((c.courseRemaining / c.courseTotal) * 100) : 0;
+      const color = c.courseRemaining <= 2 ? '#B71C1C' : c.courseRemaining <= 4 ? '#E65100' : '#2E7D4F';
+      return `<span style="display:inline-flex;align-items:center;gap:5px;background:#f0f8ff;border:1px solid #b3d9f7;color:#1565C0;border-radius:20px;padding:2px 10px;font-size:0.82rem;font-weight:600;">
+        回数コース
+        <span style="background:${color};color:#fff;border-radius:10px;padding:1px 7px;font-size:0.78rem;">残${c.courseRemaining}回</span>
+      </span>`;
+    }
+    return `<span style="background:#f5f5f5;border:1px solid #ddd;color:#888;border-radius:20px;padding:2px 10px;font-size:0.82rem;">都度払い</span>`;
+  }
+
   function formatDate(val) {
     if (!val) return '<span style="color:#bbb">未記録</span>';
     try {
@@ -106,6 +118,7 @@
               <th>顧客ID</th>
               <th>お名前</th>
               <th>電話番号</th>
+              <th>プラン</th>
               <th>保有ポイント</th>
               <th>最終来店日</th>
               <th>登録日</th>
@@ -117,6 +130,7 @@
                 <td><span style="color:var(--text-light);font-size:0.82rem;">${c.customerId || '—'}</span></td>
                 <td><a href="customer-detail.html?id=${encodeURIComponent(c.customerId)}" style="color:var(--gold-dark);text-decoration:underline;font-weight:600;">${c.name || '（未登録）'}</a></td>
                 <td>${c.phone || '—'}</td>
+                <td>${planBadge(c)}</td>
                 <td><span class="badge badge-gold">${c.points ?? 0} pt</span></td>
                 <td>${formatDate(c.lastVisit)}</td>
                 <td>${formatDate(c.createdAt)}</td>
