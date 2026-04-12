@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ダッシュボード</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body>
+<div class="layout">
+
+  <!-- サイドバー -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-en" id="salonNameSidebar">Salon</span>
+      <span class="logo-jp">サロン管理システム</span>
+      <span class="logo-sub">Admin Panel</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Menu</div>
+      <a href="dashboard.html" class="nav-item active">
+        <span class="nav-icon">◈</span> ダッシュボード
+      </a>
+      <a href="reservations.html" class="nav-item">
+        <span class="nav-icon">◷</span> 予約管理
+      </a>
+      <a href="customers.html" class="nav-item">
+        <span class="nav-icon">◉</span> 顧客管理
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()">ログアウト</button>
+    </div>
+  </aside>
+
+  <!-- メインコンテンツ -->
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Dashboard</div>
+        <div class="page-subtitle" id="todayDate"></div>
+      </div>
+      <div class="header-right">
+        <span class="badge badge-gold" id="todayBadge">読み込み中...</span>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- 統計カード -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📅</div>
+          <div>
+            <div class="stat-label">本日の予約</div>
+            <div class="stat-value"><span id="statToday">—</span><span class="stat-unit">件</span></div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div>
+            <div class="stat-label">今月の予約</div>
+            <div class="stat-value"><span id="statMonth">—</span><span class="stat-unit">件</span></div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">👤</div>
+          <div>
+            <div class="stat-label">総顧客数</div>
+            <div class="stat-value"><span id="statCustomer">—</span><span class="stat-unit">名</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 本日の予約 -->
+      <div class="card">
+        <div class="card-title">📋 本日の予約</div>
+        <div id="todayContent">
+          <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  checkAuth();
+
+  // サロン名を反映
+  document.getElementById('salonNameSidebar').textContent = SALON_NAME;
+  document.title = 'ダッシュボード - ' + SALON_NAME;
+
+  // 今日の日付
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+  document.getElementById('todayDate').textContent = dateStr;
+
+  function statusBadge(status) {
+    const map = {
+      '送信済':    'badge-green',
+      'リマインド済': 'badge-blue',
+      'キャンセル': 'badge-red',
+      '未送信':    'badge-gray',
+    };
+    const cls = map[status] || 'badge-gray';
+    return `<span class="badge ${cls}">${status || '未送信'}</span>`;
+  }
+
+  async function loadDashboard() {
+    const data = await getDashboard();
+    if (!data) return;
+
+    document.getElementById('statToday').textContent    = data.todayCount    ?? 0;
+    document.getElementById('statMonth').textContent    = data.monthCount    ?? 0;
+    document.getElementById('statCustomer').textContent = data.customerCount ?? 0;
+    document.getElementById('todayBadge').textContent   = `本日 ${data.todayCount ?? 0} 件`;
+
+    const list = data.todayReservations || [];
+    const el   = document.getElementById('todayContent');
+
+    if (list.length === 0) {
+      el.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🌿</div>
+          <p>本日の予約はありません</p>
+        </div>`;
+      return;
+    }
+
+    el.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>時間</th>
+              <th>お客様名</th>
+              <th>メニュー</th>
+              <th>電話番号</th>
+              <th>ステータス</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${list.map(r => `
+              <tr id="row-${r.row}">
+                <td><strong>${r.time}</strong></td>
+                <td>${r.name} 様</td>
+                <td>${r.menu}</td>
+                <td>${r.phone || '—'}</td>
+                <td>${statusBadge(r.status)}</td>
+                <td>
+                  ${r.status !== 'キャンセル'
+                    ? `<button class="btn btn-danger" onclick="doCancel(${r.row}, this)">キャンセル</button>`
+                    : '—'}
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  async function doCancel(row, btn) {
+    if (!confirm('この予約をキャンセルしますか？')) return;
+    btn.disabled    = true;
+    btn.textContent = '処理中...';
+    const res = await cancelReservation(row);
+    if (res && res.success) {
+      loadDashboard();
+    } else {
+      alert('キャンセルに失敗しました。');
+      btn.disabled    = false;
+      btn.textContent = 'キャンセル';
+    }
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

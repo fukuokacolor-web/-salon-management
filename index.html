@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理画面 ログイン</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+</head>
+<body class="login-page">
+
+  <div class="login-card">
+    <div class="login-card-top"></div>
+    <div class="login-card-body">
+
+      <div class="login-logo">
+        <span class="logo-en" id="salonName">Salon</span>
+        <span class="logo-sub">Management System</span>
+      </div>
+
+      <div class="login-error" id="loginError"></div>
+
+      <form class="login-form" id="loginForm">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="パスワードを入力" autocomplete="current-password" required>
+        <button type="submit" class="btn-login" id="loginBtn">ログイン</button>
+      </form>
+
+    </div>
+  </div>
+
+  <script>
+    // サロン名を反映
+    document.getElementById('salonName').textContent = SALON_NAME;
+    document.title = SALON_NAME + ' - 管理画面';
+
+    // すでにログイン済みならダッシュボードへ
+    if (sessionStorage.getItem('salon_api_key')) {
+      window.location.href = 'dashboard.html';
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const password = document.getElementById('password').value;
+      const btn      = document.getElementById('loginBtn');
+      const errorEl  = document.getElementById('loginError');
+
+      btn.disabled    = true;
+      btn.textContent = '確認中...';
+      errorEl.classList.remove('show');
+
+      const result = await login(password);
+
+      if (result.success) {
+        window.location.href = 'dashboard.html';
+      } else {
+        errorEl.textContent = result.message;
+        errorEl.classList.add('show');
+        btn.disabled    = false;
+        btn.textContent = 'ログイン';
+      }
+    });
+  </script>
+</body>
+</html>

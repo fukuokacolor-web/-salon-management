@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>予約管理</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body>
+<div class="layout">
+
+  <!-- サイドバー -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-en" id="salonNameSidebar">Salon</span>
+      <span class="logo-jp">サロン管理システム</span>
+      <span class="logo-sub">Admin Panel</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Menu</div>
+      <a href="dashboard.html" class="nav-item">
+        <span class="nav-icon">◈</span> ダッシュボード
+      </a>
+      <a href="reservations.html" class="nav-item active">
+        <span class="nav-icon">◷</span> 予約管理
+      </a>
+      <a href="customers.html" class="nav-item">
+        <span class="nav-icon">◉</span> 顧客管理
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()">ログアウト</button>
+    </div>
+  </aside>
+
+  <!-- メインコンテンツ -->
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Reservations</div>
+        <div class="page-subtitle">予約管理</div>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- 月ナビゲーション -->
+      <div class="month-nav">
+        <button onclick="changeMonth(-1)">‹</button>
+        <span class="month-label" id="monthLabel">—</span>
+        <button onclick="changeMonth(1)">›</button>
+      </div>
+
+      <!-- 予約テーブル -->
+      <div class="card">
+        <div class="card-title">📋 予約一覧</div>
+        <div id="reservationContent">
+          <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  checkAuth();
+  document.getElementById('salonNameSidebar').textContent = SALON_NAME;
+  document.title = '予約管理 - ' + SALON_NAME;
+
+  // 現在表示中の年月
+  let currentYear  = new Date().getFullYear();
+  let currentMonth = new Date().getMonth() + 1;
+
+  function monthStr() {
+    return `${currentYear}/${String(currentMonth).padStart(2, '0')}`;
+  }
+  function updateMonthLabel() {
+    document.getElementById('monthLabel').textContent =
+      `${currentYear}年${currentMonth}月`;
+  }
+  function changeMonth(delta) {
+    currentMonth += delta;
+    if (currentMonth > 12) { currentMonth = 1;  currentYear++; }
+    if (currentMonth < 1)  { currentMonth = 12; currentYear--; }
+    updateMonthLabel();
+    loadReservations();
+  }
+
+  function statusBadge(status) {
+    const map = {
+      '送信済':       'badge-green',
+      'リマインド済': 'badge-blue',
+      'キャンセル':   'badge-red',
+      '未送信':       'badge-gray',
+    };
+    const cls = map[status] || 'badge-gray';
+    return `<span class="badge ${cls}">${status || '未送信'}</span>`;
+  }
+
+  async function loadReservations() {
+    const el = document.getElementById('reservationContent');
+    el.innerHTML = '<div class="loading"><div class="spinner"></div> 読み込み中...</div>';
+    const data = await getReservations(monthStr());
+    if (!data) { el.innerHTML = '<div class="empty-state"><p>データの取得に失敗しました</p></div>'; return; }
+
+    const list = data.reservations || [];
+    if (list.length === 0) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">🌿</div><p>この月の予約はありません</p></div>`;
+      return;
+    }
+
+    el.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>日付</th>
+              <th>時間</th>
+              <th>お客様名</th>
+              <th>メニュー</th>
+              <th>電話番号</th>
+              <th>ステータス</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${list.map(r => `
+              <tr id="row-${r.row}" ${r.status === 'キャンセル' ? 'style="opacity:0.5"' : ''}>
+                <td>${r.date}</td>
+                <td><strong>${r.time}</strong></td>
+                <td>${r.name} 様</td>
+                <td>${r.menu}</td>
+                <td>${r.phone || '—'}</td>
+                <td>${statusBadge(r.status)}</td>
+                <td>
+                  ${r.status !== 'キャンセル'
+                    ? `<button class="btn btn-danger" onclick="doCancel(${r.row}, this)">キャンセル</button>`
+                    : '—'}
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  async function doCancel(row, btn) {
+    if (!confirm('この予約をキャンセルしますか？')) return;
+    btn.disabled    = true;
+    btn.textContent = '処理中...';
+    const res = await cancelReservation(row);
+    if (res && res.success) {
+      loadReservations();
+    } else {
+      alert('キャンセルに失敗しました。');
+      btn.disabled    = false;
+      btn.textContent = 'キャンセル';
+    }
+  }
+
+  updateMonthLabel();
+  loadReservations();
+</script>
+</body>
+</html>
