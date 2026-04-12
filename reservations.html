@@ -8,6 +8,77 @@
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/api.js"></script>
+  <style>
+    /* ── フィルタータブ ── */
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .filter-tab {
+      background: var(--white);
+      border: 1px solid var(--border);
+      color: var(--text-light);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .filter-tab:hover { border-color: var(--gold); color: var(--gold); }
+    .filter-tab.active {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: #fff;
+      font-weight: 500;
+    }
+    .filter-tab .tab-count {
+      background: rgba(255,255,255,0.3);
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 0.75rem;
+      margin-left: 4px;
+    }
+    .filter-tab:not(.active) .tab-count {
+      background: var(--gold-light);
+      color: var(--gold-dark);
+    }
+
+    /* ── キャンセルトグル ── */
+    .toggle-cancel {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-light);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-left: auto;
+    }
+    .toggle-cancel:hover { border-color: var(--gold); color: var(--gold); }
+    .toggle-cancel.hiding { border-color: #FBBABA; color: #B71C1C; background: #FDEAEA; }
+
+    /* ── 今日ハイライト ── */
+    tr.today-row td {
+      background: var(--gold-bg);
+    }
+    tr.today-row td:first-child {
+      border-left: 3px solid var(--gold);
+    }
+    .today-mark {
+      display: inline-block;
+      background: var(--gold);
+      color: #fff;
+      font-size: 0.68rem;
+      padding: 1px 6px;
+      border-radius: 3px;
+      margin-left: 5px;
+      vertical-align: middle;
+    }
+  </style>
 </head>
 <body>
 <div class="layout">
@@ -43,6 +114,7 @@
         <div class="page-title">Reservations</div>
         <div class="page-subtitle">予約管理</div>
       </div>
+      <div class="header-right" id="headerBadges" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
     </div>
 
     <div class="page-body">
@@ -52,6 +124,25 @@
         <button onclick="changeMonth(-1)">‹</button>
         <span class="month-label" id="monthLabel">—</span>
         <button onclick="changeMonth(1)">›</button>
+      </div>
+
+      <!-- フィルタータブ + キャンセルトグル -->
+      <div class="filter-tabs" id="filterTabs" style="display:none;">
+        <button class="filter-tab active" data-status="all" onclick="setFilter('all')">
+          すべて <span class="tab-count" id="cnt-all">0</span>
+        </button>
+        <button class="filter-tab" data-status="未送信" onclick="setFilter('未送信')">
+          未送信 <span class="tab-count" id="cnt-未送信">0</span>
+        </button>
+        <button class="filter-tab" data-status="送信済" onclick="setFilter('送信済')">
+          送信済 <span class="tab-count" id="cnt-送信済">0</span>
+        </button>
+        <button class="filter-tab" data-status="リマインド済" onclick="setFilter('リマインド済')">
+          リマインド済 <span class="tab-count" id="cnt-リマインド済">0</span>
+        </button>
+        <button class="toggle-cancel" id="toggleCancel" onclick="toggleCancel()">
+          キャンセルを非表示
+        </button>
       </div>
 
       <!-- 予約テーブル -->
@@ -71,9 +162,19 @@
   document.getElementById('salonNameSidebar').textContent = SALON_NAME;
   document.title = '予約管理 - ' + SALON_NAME;
 
-  // 現在表示中の年月
   let currentYear  = new Date().getFullYear();
   let currentMonth = new Date().getMonth() + 1;
+  let allReservations = [];
+  let currentFilter   = 'all';
+  let hidingCancel    = false;
+
+  const todayStr = (() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}/${m}/${day}`;
+  })();
 
   function monthStr() {
     return `${currentYear}/${String(currentMonth).padStart(2, '0')}`;
@@ -101,15 +202,67 @@
     return `<span class="badge ${cls}">${status || '未送信'}</span>`;
   }
 
-  async function loadReservations() {
-    const el = document.getElementById('reservationContent');
-    el.innerHTML = '<div class="loading"><div class="spinner"></div> 読み込み中...</div>';
-    const data = await getReservations(monthStr());
-    if (!data) { el.innerHTML = '<div class="empty-state"><p>データの取得に失敗しました</p></div>'; return; }
+  // ② 件数バッジ更新
+  function updateBadges(list) {
+    const total    = list.filter(r => r.status !== 'キャンセル').length;
+    const canceled = list.filter(r => r.status === 'キャンセル').length;
+    document.getElementById('headerBadges').innerHTML = `
+      <span class="badge badge-gold">今月 ${total} 件</span>
+      ${canceled > 0 ? `<span class="badge badge-red">キャンセル ${canceled} 件</span>` : ''}
+    `;
 
-    const list = data.reservations || [];
+    // タブカウント更新
+    const statuses = ['未送信','送信済','リマインド済'];
+    const all = list.filter(r => r.status !== 'キャンセル').length;
+    document.getElementById('cnt-all').textContent = all;
+    statuses.forEach(s => {
+      const el = document.getElementById('cnt-' + s);
+      if (el) el.textContent = list.filter(r => r.status === s).length;
+    });
+  }
+
+  // ① フィルター切替
+  function setFilter(status) {
+    currentFilter = status;
+    document.querySelectorAll('.filter-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.status === status);
+    });
+    renderTable();
+  }
+
+  // ④ キャンセル表示トグル
+  function toggleCancel() {
+    hidingCancel = !hidingCancel;
+    const btn = document.getElementById('toggleCancel');
+    if (hidingCancel) {
+      btn.textContent = 'キャンセルを表示';
+      btn.classList.add('hiding');
+    } else {
+      btn.textContent = 'キャンセルを非表示';
+      btn.classList.remove('hiding');
+    }
+    renderTable();
+  }
+
+  function renderTable() {
+    const el = document.getElementById('reservationContent');
+
+    let list = allReservations;
+
+    // キャンセル非表示
+    if (hidingCancel) {
+      list = list.filter(r => r.status !== 'キャンセル');
+    }
+
+    // ステータスフィルター（「all」はキャンセル以外全て）
+    if (currentFilter !== 'all') {
+      list = list.filter(r => r.status === currentFilter);
+    } else {
+      // allタブでもキャンセル非表示オフなら全件（キャンセルも含む）
+    }
+
     if (list.length === 0) {
-      el.innerHTML = `<div class="empty-state"><div class="empty-icon">🌿</div><p>この月の予約はありません</p></div>`;
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">🌿</div><p>該当する予約はありません</p></div>`;
       return;
     }
 
@@ -128,23 +281,47 @@
             </tr>
           </thead>
           <tbody>
-            ${list.map(r => `
-              <tr id="row-${r.row}" ${r.status === 'キャンセル' ? 'style="opacity:0.5"' : ''}>
-                <td>${r.date}</td>
+            ${list.map(r => {
+              const isToday   = r.date === todayStr;
+              const isCancel  = r.status === 'キャンセル';
+              const rowClass  = isToday ? 'today-row' : '';
+              const rowStyle  = isCancel ? 'opacity:0.5' : '';
+              const todayMark = isToday ? '<span class="today-mark">TODAY</span>' : '';
+              return `
+              <tr id="row-${r.row}" class="${rowClass}" ${rowStyle ? `style="${rowStyle}"` : ''}>
+                <td>${r.date}${todayMark}</td>
                 <td><strong>${r.time}</strong></td>
                 <td>${r.name} 様</td>
-                <td>${r.menu}</td>
+                <td>${r.menu || '—'}</td>
                 <td>${r.phone || '—'}</td>
                 <td>${statusBadge(r.status)}</td>
                 <td>
-                  ${r.status !== 'キャンセル'
+                  ${!isCancel
                     ? `<button class="btn btn-danger" onclick="doCancel(${r.row}, this)">キャンセル</button>`
                     : '—'}
                 </td>
-              </tr>`).join('')}
+              </tr>`;
+            }).join('')}
           </tbody>
         </table>
       </div>`;
+  }
+
+  async function loadReservations() {
+    const el = document.getElementById('reservationContent');
+    el.innerHTML = '<div class="loading"><div class="spinner"></div> 読み込み中...</div>';
+    document.getElementById('filterTabs').style.display = 'none';
+
+    const data = await getReservations(monthStr());
+    if (!data) {
+      el.innerHTML = '<div class="empty-state"><p>データの取得に失敗しました</p></div>';
+      return;
+    }
+
+    allReservations = data.reservations || [];
+    updateBadges(allReservations);
+    document.getElementById('filterTabs').style.display = 'flex';
+    renderTable();
   }
 
   async function doCancel(row, btn) {
