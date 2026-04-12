@@ -68,6 +68,16 @@
     tr.today-row td:first-child {
       border-left: 3px solid var(--gold);
     }
+    .btn-complete {
+      background: transparent;
+      border: 1px solid #A5D6A7;
+      color: #2E7D4F;
+      font-size: 0.75rem;
+      padding: 5px 12px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .btn-complete:hover { background: #EAF7EE; }
     .today-mark {
       display: inline-block;
       background: var(--gold);
@@ -100,6 +110,9 @@
       </a>
       <a href="customers.html" class="nav-item">
         <span class="nav-icon">◉</span> 顧客管理
+      </a>
+      <a href="settings.html" class="nav-item">
+        <span class="nav-icon">◎</span> 設定
       </a>
     </nav>
     <div class="sidebar-footer">
@@ -295,10 +308,13 @@
                 <td>${r.menu || '—'}</td>
                 <td>${r.phone || '—'}</td>
                 <td>${statusBadge(r.status)}</td>
-                <td>
-                  ${!isCancel
-                    ? `<button class="btn btn-danger" onclick="doCancel(${r.row}, this)">キャンセル</button>`
-                    : '—'}
+                <td style="display:flex;gap:6px;flex-wrap:wrap;">
+                  ${r.status === '完了'
+                    ? '<span style="color:#2E7D4F;font-size:0.82rem;">✓ 完了</span>'
+                    : isCancel
+                      ? '—'
+                      : `<button class="btn btn-complete" onclick="doComplete(${r.row}, this)">完了</button>
+                         <button class="btn btn-danger" onclick="doCancel(${r.row}, this)">キャンセル</button>`}
                 </td>
               </tr>`;
             }).join('')}
@@ -322,6 +338,20 @@
     updateBadges(allReservations);
     document.getElementById('filterTabs').style.display = 'flex';
     renderTable();
+  }
+
+  async function doComplete(row, btn) {
+    if (!confirm('来店完了にしますか？\nメニューに応じたポイントが自動で付与されます。')) return;
+    btn.disabled    = true;
+    btn.textContent = '処理中...';
+    const res = await completeReservation(row);
+    if (res && res.success) {
+      loadReservations();
+    } else {
+      alert('処理に失敗しました: ' + (res && res.message ? res.message : ''));
+      btn.disabled    = false;
+      btn.textContent = '完了';
+    }
   }
 
   async function doCancel(row, btn) {

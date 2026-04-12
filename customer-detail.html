@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>顧客詳細</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <style>
+    .customer-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 40px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .customer-avatar {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: var(--gold-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; color: var(--gold-dark);
+      flex-shrink: 0;
+    }
+    .customer-info { flex: 1; min-width: 200px; }
+    .customer-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .customer-id {
+      color: var(--text-light);
+      font-size: 0.82rem;
+      margin-bottom: 12px;
+    }
+    .info-row {
+      display: flex; gap: 8px; align-items: center;
+      color: var(--text-light); font-size: 0.9rem;
+      margin-bottom: 4px;
+    }
+    .point-box {
+      background: var(--gold-bg);
+      border: 1px solid var(--gold-light);
+      border-radius: var(--radius-lg);
+      padding: 20px 28px;
+      text-align: center;
+      min-width: 140px;
+    }
+    .point-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--gold-dark);
+      line-height: 1;
+    }
+    .point-label { color: var(--text-light); font-size: 0.82rem; margin-top: 4px; }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- サイドバー -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-en" id="salonNameSidebar">Salon</span>
+      <span class="logo-jp">サロン管理システム</span>
+      <span class="logo-sub">Admin Panel</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Menu</div>
+      <a href="dashboard.html" class="nav-item">
+        <span class="nav-icon">◈</span> ダッシュボード
+      </a>
+      <a href="reservations.html" class="nav-item">
+        <span class="nav-icon">◷</span> 予約管理
+      </a>
+      <a href="customers.html" class="nav-item active">
+        <span class="nav-icon">◉</span> 顧客管理
+      </a>
+      <a href="settings.html" class="nav-item">
+        <span class="nav-icon">◎</span> 設定
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()">ログアウト</button>
+    </div>
+  </aside>
+
+  <!-- メインコンテンツ -->
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Customer Detail</div>
+        <div class="page-subtitle"><a href="customers.html" style="color:var(--text-light);font-size:0.85rem;">← 顧客一覧に戻る</a></div>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <!-- 顧客情報カード -->
+      <div id="customerCard">
+        <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+      </div>
+
+      <!-- 来店記録 -->
+      <div class="card">
+        <div class="card-title">📅 来店記録</div>
+        <div id="visitContent">
+          <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  checkAuth();
+  document.getElementById('salonNameSidebar').textContent = SALON_NAME;
+
+  const params     = new URLSearchParams(location.search);
+  const customerId = params.get('id') || '';
+
+  function formatDate(val) {
+    if (!val) return '<span style="color:#bbb">未記録</span>';
+    try {
+      const d = new Date(val);
+      if (isNaN(d)) return val;
+      return d.toLocaleDateString('ja-JP');
+    } catch { return val; }
+  }
+
+  async function loadDetail() {
+    if (!customerId) {
+      document.getElementById('customerCard').innerHTML =
+        '<div class="empty-state"><p>顧客IDが指定されていません</p></div>';
+      return;
+    }
+
+    const data = await getCustomerDetail(customerId);
+    if (!data || data.error) {
+      document.getElementById('customerCard').innerHTML =
+        `<div class="empty-state"><p>${data ? data.error : 'データの取得に失敗しました'}</p></div>`;
+      return;
+    }
+
+    const c = data.customer;
+    document.title = c.name + ' - ' + SALON_NAME;
+
+    // 顧客カード描画
+    document.getElementById('customerCard').innerHTML = `
+      <div class="customer-card">
+        <div class="customer-avatar">👤</div>
+        <div class="customer-info">
+          <div class="customer-name">${c.name || '（未登録）'} 様</div>
+          <div class="customer-id">顧客ID: ${c.customerId || '—'}</div>
+          <div class="info-row">📞 ${c.phone || '—'}</div>
+          <div class="info-row">📅 最終来店：${formatDate(c.lastVisit)}</div>
+          <div class="info-row">🗓 登録日：${formatDate(c.createdAt)}</div>
+        </div>
+        <div class="point-box">
+          <div class="point-num">${c.points ?? 0}</div>
+          <div class="point-label">保有ポイント (pt)</div>
+        </div>
+      </div>`;
+
+    // 来店記録描画
+    const visEl = document.getElementById('visitContent');
+    const visits = data.visits || [];
+    if (visits.length === 0) {
+      visEl.innerHTML = `<div class="empty-state"><div class="empty-icon">🌿</div><p>来店記録がありません</p></div>`;
+      return;
+    }
+    visEl.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>来店日時</th>
+              <th>メニュー</th>
+              <th>付与ポイント</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${visits.map(v => `
+              <tr>
+                <td>${v.date}</td>
+                <td>${v.menu || '—'}</td>
+                <td><span class="badge badge-gold">+${v.pointsAdded} pt</span></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  loadDetail();
+</script>
+</body>
+</html>

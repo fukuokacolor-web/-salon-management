@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>設定</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body>
+<div class="layout">
+
+  <!-- サイドバー -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-en" id="salonNameSidebar">Salon</span>
+      <span class="logo-jp">サロン管理システム</span>
+      <span class="logo-sub">Admin Panel</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Menu</div>
+      <a href="dashboard.html" class="nav-item">
+        <span class="nav-icon">◈</span> ダッシュボード
+      </a>
+      <a href="reservations.html" class="nav-item">
+        <span class="nav-icon">◷</span> 予約管理
+      </a>
+      <a href="customers.html" class="nav-item">
+        <span class="nav-icon">◉</span> 顧客管理
+      </a>
+      <a href="settings.html" class="nav-item active">
+        <span class="nav-icon">◎</span> 設定
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()">ログアウト</button>
+    </div>
+  </aside>
+
+  <!-- メインコンテンツ -->
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Settings</div>
+        <div class="page-subtitle">設定</div>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <div class="card">
+        <div class="card-title">🎁 メニュー別ポイント設定</div>
+        <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:20px;">
+          各メニューで来店完了時に付与するポイント数を設定してください。
+        </p>
+        <div id="settingsContent">
+          <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+        </div>
+        <div id="saveArea" style="display:none;margin-top:20px;">
+          <button class="btn btn-gold" onclick="saveSettings()">保存する</button>
+          <span id="saveMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  checkAuth();
+  document.getElementById('salonNameSidebar').textContent = SALON_NAME;
+  document.title = '設定 - ' + SALON_NAME;
+
+  let currentMenuPoints = {};
+
+  async function loadSettings() {
+    const data = await getMenuPoints();
+    if (!data) {
+      document.getElementById('settingsContent').innerHTML =
+        '<div class="empty-state"><p>データの取得に失敗しました</p></div>';
+      return;
+    }
+
+    currentMenuPoints = data.menuPoints || {};
+    const menuList    = data.menuList   || [];
+
+    if (menuList.length === 0) {
+      document.getElementById('settingsContent').innerHTML =
+        '<div class="empty-state"><div class="empty-icon">🌿</div><p>メニューが設定されていません。<br>GASのスクリプトプロパティ「MENU_LIST」を設定してください。</p></div>';
+      return;
+    }
+
+    document.getElementById('settingsContent').innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>メニュー名</th>
+              <th style="width:200px;">付与ポイント (pt)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${menuList.map(menu => `
+              <tr>
+                <td>${menu}</td>
+                <td>
+                  <input type="number" min="0" step="1"
+                    id="pt_${encodeURIComponent(menu)}"
+                    value="${currentMenuPoints[menu] || 0}"
+                    style="width:120px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;text-align:right;"
+                    onchange="onPointChange('${menu.replace(/'/g, "\\'")}', this.value)">
+                  <span style="color:var(--text-light);font-size:0.85rem;margin-left:4px;">pt</span>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+
+    document.getElementById('saveArea').style.display = 'block';
+  }
+
+  function onPointChange(menu, value) {
+    currentMenuPoints[menu] = parseInt(value, 10) || 0;
+  }
+
+  async function saveSettings() {
+    const btn = document.querySelector('.btn-gold');
+    btn.disabled    = true;
+    btn.textContent = '保存中...';
+    document.getElementById('saveMsg').textContent = '';
+
+    const res = await saveMenuPoints(currentMenuPoints);
+
+    btn.disabled    = false;
+    btn.textContent = '保存する';
+    if (res && res.success) {
+      document.getElementById('saveMsg').innerHTML =
+        '<span style="color:#2E7D4F;">✓ 保存しました</span>';
+      setTimeout(() => { document.getElementById('saveMsg').textContent = ''; }, 3000);
+    } else {
+      document.getElementById('saveMsg').innerHTML =
+        '<span style="color:#B71C1C;">保存に失敗しました</span>';
+    }
+  }
+
+  loadSettings();
+</script>
+</body>
+</html>

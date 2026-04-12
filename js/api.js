@@ -60,3 +60,23 @@ async function getCustomers() {
 async function cancelReservation(row) {
   return apiGet('cancelReservation', { row });
 }
+
+/** 予約を完了（来店記録＋ポイント付与） */
+async function completeReservation(row) {
+  return apiGet('completeReservation', { row });
+}
+
+/** 顧客詳細・来店記録取得 */
+async function getCustomerDetail(customerId) {
+  return apiGet('getCustomerDetail', { customerId });
+}
+
+/** メニュー別ポイント設定取得 */
+async function getMenuPoints() {
+  return apiGet('getMenuPoints');
+}
+
+/** メニュー別ポイント設定保存 */
+async function saveMenuPoints(menuPoints) {
+  return apiGet('saveMenuPoints', { menuPoints: JSON.stringify(menuPoints) });
+}

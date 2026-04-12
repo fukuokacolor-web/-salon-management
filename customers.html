@@ -30,6 +30,9 @@
       <a href="customers.html" class="nav-item active">
         <span class="nav-icon">◉</span> 顧客管理
       </a>
+      <a href="settings.html" class="nav-item">
+        <span class="nav-icon">◎</span> 設定
+      </a>
     </nav>
     <div class="sidebar-footer">
       <button class="btn-logout" onclick="logout()">ログアウト</button>
@@ -100,6 +103,7 @@
         <table>
           <thead>
             <tr>
+              <th>顧客ID</th>
               <th>お名前</th>
               <th>電話番号</th>
               <th>保有ポイント</th>
@@ -110,7 +114,8 @@
           <tbody>
             ${list.map(c => `
               <tr>
-                <td><strong>${c.name || '（未登録）'}</strong></td>
+                <td><span style="color:var(--text-light);font-size:0.82rem;">${c.customerId || '—'}</span></td>
+                <td><a href="customer-detail.html?id=${encodeURIComponent(c.customerId)}" style="color:var(--gold-dark);text-decoration:underline;font-weight:600;">${c.name || '（未登録）'}</a></td>
                 <td>${c.phone || '—'}</td>
                 <td><span class="badge badge-gold">${c.points ?? 0} pt</span></td>
                 <td>${formatDate(c.lastVisit)}</td>
