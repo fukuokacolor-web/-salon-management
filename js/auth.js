@@ -6,15 +6,21 @@ const AUTH_KEY = 'salon_api_key';
 
 /**
  * ログイン処理
- * GASにパスワードを送ってAPIキーを取得・保存する
  */
 async function login(password) {
   try {
-    const url = `${GAS_URL}?action=login&password=${encodeURIComponent(password)}`;
+    const url = GAS_URL + '?action=login&password=' + encodeURIComponent(password);
     const res  = await fetch(url, { redirect: 'follow' });
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch(e) {
+      console.error('JSON parse error:', text);
+      return { success: false, message: 'サーバーからの応答が不正です。' };
+    }
     if (data.success && data.key) {
-      sessionStorage.setItem(AUTH_KEY, data.key);
+      localStorage.setItem(AUTH_KEY, data.key);
       return { success: true };
     }
     return { success: false, message: data.message || 'パスワードが違います' };
@@ -28,7 +34,7 @@ async function login(password) {
  * ログアウト
  */
 function logout() {
-  sessionStorage.removeItem(AUTH_KEY);
+  localStorage.removeItem(AUTH_KEY);
   window.location.href = 'index.html';
 }
 
@@ -36,7 +42,7 @@ function logout() {
  * 認証チェック（各ページの先頭で呼ぶ）
  */
 function checkAuth() {
-  if (!sessionStorage.getItem(AUTH_KEY)) {
+  if (!localStorage.getItem(AUTH_KEY)) {
     window.location.href = 'index.html';
     return false;
   }
@@ -47,5 +53,5 @@ function checkAuth() {
  * 保存済みAPIキーを取得
  */
 function getApiKey() {
-  return sessionStorage.getItem(AUTH_KEY) || '';
+  return localStorage.getItem(AUTH_KEY) || '';
 }
