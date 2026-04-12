@@ -12,10 +12,26 @@ async function apiGet(action, params = {}) {
       key: getApiKey(),
       ...params,
     });
-    const res  = await fetch(`${GAS_URL}?${query}`, { redirect: 'follow' });
-    const data = await res.json();
+    const res  = await fetch(`${GAS_URL}?${query}`, {
+      redirect: 'follow',
+      mode: 'cors',
+    });
+
+    // レスポンスのテキストを取得してからJSONをパース
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error('JSON parse error:', text);
+      return null;
+    }
+
     if (data.error === 'unauthorized') {
-      logout();
+      // unauthorizedの場合はログアウトせず、再ログインを促す
+      console.warn('API unauthorized - セッション切れの可能性があります');
+      sessionStorage.removeItem('salon_api_key');
+      window.location.href = 'index.html';
       return null;
     }
     return data;

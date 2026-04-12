@@ -1,67 +1,154 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>管理画面 ログイン</title>
+  <title>顧客管理</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
 </head>
-<body class="login-page">
+<body>
+<div class="layout">
 
-  <div class="login-card">
-    <div class="login-card-top"></div>
-    <div class="login-card-body">
+  <!-- サイドバー -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-en" id="salonNameSidebar">Salon</span>
+      <span class="logo-jp">サロン管理システム</span>
+      <span class="logo-sub">Admin Panel</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Menu</div>
+      <a href="dashboard.html" class="nav-item">
+        <span class="nav-icon">◈</span> ダッシュボード
+      </a>
+      <a href="reservations.html" class="nav-item">
+        <span class="nav-icon">◷</span> 予約管理
+      </a>
+      <a href="customers.html" class="nav-item active">
+        <span class="nav-icon">◉</span> 顧客管理
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()">ログアウト</button>
+    </div>
+  </aside>
 
-      <div class="login-logo">
-        <span class="logo-en" id="salonName">Salon</span>
-        <span class="logo-sub">Management System</span>
+  <!-- メインコンテンツ -->
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Customers</div>
+        <div class="page-subtitle">顧客管理</div>
+      </div>
+      <div class="header-right">
+        <span class="badge badge-gold" id="customerCount">読み込み中...</span>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- 検索 -->
+      <div style="display:flex; gap:10px; align-items:center; margin-bottom:20px;">
+        <div class="search-box" style="margin-bottom:0;">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="名前・電話番号で検索"
+            onkeydown="if(event.key==='Enter') filterCustomers()">
+        </div>
+        <button class="btn btn-gold" onclick="filterCustomers()">検索</button>
+        <button class="btn btn-outline" onclick="resetSearch()">リセット</button>
       </div>
 
-      <div class="login-error" id="loginError"></div>
-
-      <form class="login-form" id="loginForm">
-        <label for="password">Password</label>
-        <input type="password" id="password" placeholder="パスワードを入力" autocomplete="current-password" required>
-        <button type="submit" class="btn-login" id="loginBtn">ログイン</button>
-      </form>
+      <!-- 顧客テーブル -->
+      <div class="card">
+        <div class="card-title">👤 顧客一覧</div>
+        <div id="customerContent">
+          <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+        </div>
+      </div>
 
     </div>
   </div>
+</div>
 
-  <script>
-    // サロン名を反映
-    document.getElementById('salonName').textContent = SALON_NAME;
-    document.title = SALON_NAME + ' - 管理画面';
+<script>
+  checkAuth();
+  document.getElementById('salonNameSidebar').textContent = SALON_NAME;
+  document.title = '顧客管理 - ' + SALON_NAME;
 
-    // すでにログイン済みならダッシュボードへ
-    if (sessionStorage.getItem('salon_api_key')) {
-      window.location.href = 'dashboard.html';
+  let allCustomers = [];
+
+  function formatDate(val) {
+    if (!val) return '<span style="color:#bbb">未記録</span>';
+    try {
+      const d = new Date(val);
+      if (isNaN(d)) return val;
+      return d.toLocaleDateString('ja-JP');
+    } catch { return val; }
+  }
+
+  function renderTable(list) {
+    const el = document.getElementById('customerContent');
+    if (list.length === 0) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">🌿</div><p>顧客データがありません</p></div>`;
+      return;
     }
+    el.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>お名前</th>
+              <th>電話番号</th>
+              <th>保有ポイント</th>
+              <th>最終来店日</th>
+              <th>登録日</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${list.map(c => `
+              <tr>
+                <td><strong>${c.name || '（未登録）'}</strong></td>
+                <td>${c.phone || '—'}</td>
+                <td><span class="badge badge-gold">${c.points ?? 0} pt</span></td>
+                <td>${formatDate(c.lastVisit)}</td>
+                <td>${formatDate(c.createdAt)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
 
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const password = document.getElementById('password').value;
-      const btn      = document.getElementById('loginBtn');
-      const errorEl  = document.getElementById('loginError');
+  function filterCustomers() {
+    const q = document.getElementById('searchInput').value.trim().toLowerCase();
+    if (!q) { renderTable(allCustomers); return; }
+    const filtered = allCustomers.filter(c =>
+      (c.name  || '').toLowerCase().includes(q) ||
+      (c.phone || '').includes(q)
+    );
+    renderTable(filtered);
+  }
 
-      btn.disabled    = true;
-      btn.textContent = '確認中...';
-      errorEl.classList.remove('show');
+  function resetSearch() {
+    document.getElementById('searchInput').value = '';
+    renderTable(allCustomers);
+  }
 
-      const result = await login(password);
+  async function loadCustomers() {
+    const data = await getCustomers();
+    if (!data) {
+      document.getElementById('customerContent').innerHTML =
+        '<div class="empty-state"><p>データの取得に失敗しました</p></div>';
+      return;
+    }
+    allCustomers = data.customers || [];
+    document.getElementById('customerCount').textContent = `総顧客数 ${allCustomers.length} 名`;
+    renderTable(allCustomers);
+  }
 
-      if (result.success) {
-        window.location.href = 'dashboard.html';
-      } else {
-        errorEl.textContent = result.message;
-        errorEl.classList.add('show');
-        btn.disabled    = false;
-        btn.textContent = 'ログイン';
-      }
-    });
-  </script>
+  loadCustomers();
+</script>
 </body>
 </html>
