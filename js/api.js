@@ -85,3 +85,36 @@ async function saveMenuPoints(menuPoints) {
 async function setPlan(customerId, plan, courseTotal) {
   return apiGet('setPlan', { customerId, plan, courseTotal: String(courseTotal || '') });
 }
+
+/** メニュー単価設定取得 */
+async function getMenuPrices() {
+  return apiGet('getMenuPrices');
+}
+
+/** メニュー単価設定保存 */
+async function saveMenuPrices(menuPrices) {
+  return apiGet('saveMenuPrices', { menuPrices: JSON.stringify(menuPrices) });
+}
+
+/** 売上レポート取得（months: 集計月数） */
+async function getSalesReport(months = 6) {
+  return apiGet('getSalesReport', { months: String(months) });
+}
+
+/** 定休日設定取得 */
+async function getClosedDays() {
+  return apiGet('getClosedDays');
+}
+
+/** 定休日設定保存 */
+async function saveClosedDays(dates, weekdays) {
+  return apiGet('saveClosedDays', {
+    dates:    JSON.stringify(dates),
+    weekdays: JSON.stringify(weekdays),
+  });
+}
+
+/** 予約を新規保存（顧客自動作成つき） */
+async function saveReservation(params) {
+  return apiGet('saveReservation', params);
+}

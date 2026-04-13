@@ -92,6 +92,85 @@
       margin-left: 5px;
       vertical-align: middle;
     }
+
+    /* ── 新規予約モーダル ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff;
+      border-radius: 12px;
+      padding: 32px 28px 24px;
+      width: 440px;
+      max-width: 95vw;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-field {
+      margin-bottom: 14px;
+    }
+    .modal-field label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-light);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .modal-field label span.req {
+      color: #B71C1C;
+      margin-left: 3px;
+    }
+    .modal-field input,
+    .modal-field select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.92rem;
+      box-sizing: border-box;
+      color: var(--text);
+      background: #fff;
+    }
+    .modal-field input:focus,
+    .modal-field select:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px rgba(184,80,66,0.1);
+    }
+    .modal-row { display: flex; gap: 10px; }
+    .modal-row .modal-field { flex: 1; }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+    .btn-add-res {
+      background: var(--gold);
+      color: #fff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-add-res:hover { opacity: 0.85; }
   </style>
 </head>
 <body>
@@ -115,6 +194,9 @@
       <a href="customers.html" class="nav-item">
         <span class="nav-icon">◉</span> 顧客管理
       </a>
+      <a href="sales.html" class="nav-item">
+        <span class="nav-icon">◑</span> 売上レポート
+      </a>
       <a href="settings.html" class="nav-item">
         <span class="nav-icon">◎</span> 設定
       </a>
@@ -131,7 +213,10 @@
         <div class="page-title">Reservations</div>
         <div class="page-subtitle">予約管理</div>
       </div>
-      <div class="header-right" id="headerBadges" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      <div class="header-right" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <div id="headerBadges" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+        <button class="btn-add-res" onclick="openAddModal()">＋ 新規予約</button>
+      </div>
     </div>
 
     <div class="page-body">
@@ -170,6 +255,43 @@
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- 新規予約モーダル -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal-box">
+    <div class="modal-title">📋 新規予約を追加</div>
+    <div class="modal-row">
+      <div class="modal-field">
+        <label>日付<span class="req">*</span></label>
+        <input type="date" id="f_date">
+      </div>
+      <div class="modal-field">
+        <label>時間<span class="req">*</span></label>
+        <input type="time" id="f_time" value="10:00">
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>お客様名<span class="req">*</span></label>
+      <input type="text" id="f_name" placeholder="山田 花子" autocomplete="off">
+    </div>
+    <div class="modal-field">
+      <label>電話番号</label>
+      <input type="tel" id="f_phone" placeholder="09012345678">
+    </div>
+    <div class="modal-field">
+      <label>メニュー</label>
+      <input type="text" id="f_menu" placeholder="全身脱毛 など">
+    </div>
+    <div class="modal-field">
+      <label>備考</label>
+      <input type="text" id="f_note" placeholder="初回割引など">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeAddModal()">キャンセル</button>
+      <button class="btn-add-res" id="addSubmitBtn" onclick="submitAddReservation()">予約を保存</button>
     </div>
   </div>
 </div>
@@ -384,6 +506,76 @@
 
   updateMonthLabel();
   loadReservations();
+
+  // ── 新規予約モーダル ──────────────────────────────
+  function openAddModal() {
+    // 今日の日付をデフォルト設定
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm   = String(today.getMonth() + 1).padStart(2, '0');
+    const dd   = String(today.getDate()).padStart(2, '0');
+    document.getElementById('f_date').value = `${yyyy}-${mm}-${dd}`;
+    document.getElementById('f_name').value  = '';
+    document.getElementById('f_phone').value = '';
+    document.getElementById('f_menu').value  = '';
+    document.getElementById('f_note').value  = '';
+    document.getElementById('addSubmitBtn').disabled = false;
+    document.getElementById('addSubmitBtn').textContent = '予約を保存';
+    document.getElementById('addModal').classList.add('open');
+    setTimeout(() => document.getElementById('f_name').focus(), 100);
+  }
+
+  function closeAddModal() {
+    document.getElementById('addModal').classList.remove('open');
+  }
+
+  // オーバーレイクリックで閉じる
+  document.getElementById('addModal').addEventListener('click', function(e) {
+    if (e.target === this) closeAddModal();
+  });
+
+  async function submitAddReservation() {
+    const date  = document.getElementById('f_date').value;
+    const time  = document.getElementById('f_time').value;
+    const name  = document.getElementById('f_name').value.trim();
+    const phone = document.getElementById('f_phone').value.trim();
+    const menu  = document.getElementById('f_menu').value.trim();
+    const note  = document.getElementById('f_note').value.trim();
+
+    if (!date || !time || !name) {
+      alert('日付・時間・お客様名は必須です');
+      return;
+    }
+
+    const btn = document.getElementById('addSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+
+    // "yyyy/MM/dd HH:mm" 形式に変換
+    const dateFormatted = date.replace(/-/g, '/') + ' ' + time;
+
+    const res = await saveReservation({
+      name,
+      phone,
+      date: dateFormatted,
+      menu,
+      note,
+    });
+
+    if (res && res.success) {
+      closeAddModal();
+      // 保存した月に移動してリロード
+      const [y, m] = date.split('-');
+      currentYear  = parseInt(y);
+      currentMonth = parseInt(m);
+      updateMonthLabel();
+      loadReservations();
+    } else {
+      alert('保存に失敗しました: ' + (res && res.message ? res.message : '不明なエラー'));
+      btn.disabled = false;
+      btn.textContent = '予約を保存';
+    }
+  }
 </script>
 </body>
 </html>
