@@ -12,6 +12,7 @@
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <div class="layout">
@@ -33,6 +34,9 @@
       </a>
       <a href="customers.html" class="nav-item">
         <span class="nav-icon">◉</span> 顧客管理
+      </a>
+      <a href="sales.html" class="nav-item">
+        <span class="nav-icon">◑</span> 売上レポート
       </a>
       <a href="settings.html" class="nav-item">
         <span class="nav-icon">◎</span> 設定
@@ -86,6 +90,51 @@
       <div class="card">
         <div class="card-title">📋 本日の予約</div>
         <div id="todayContent">
+          <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+        </div>
+      </div>
+
+      <!-- 売上レポート -->
+      <div class="card">
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <span>📊 売上レポート</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <select id="dashMonthSelect" onchange="loadSalesReport()" style="padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.85rem;background:#fff;cursor:pointer;">
+              <option value="3">直近3ヶ月</option>
+              <option value="6" selected>直近6ヶ月</option>
+              <option value="12">直近12ヶ月</option>
+            </select>
+            <a href="sales.html" style="font-size:0.8rem;color:var(--gold-dark);text-decoration:underline;">詳細ページへ</a>
+          </div>
+        </div>
+
+        <!-- サマリーカード -->
+        <div class="stat-grid" style="margin-bottom:16px;" id="dashSummaryCards">
+          <div class="stat-card">
+            <div class="stat-icon">💴</div>
+            <div>
+              <div class="stat-label">期間合計売上</div>
+              <div class="stat-value"><span id="dashTotalSales">—</span><span class="stat-unit">円</span></div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">✂️</div>
+            <div>
+              <div class="stat-label">期間合計来店</div>
+              <div class="stat-value"><span id="dashTotalVisits">—</span><span class="stat-unit">件</span></div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📈</div>
+            <div>
+              <div class="stat-label">平均客単価</div>
+              <div class="stat-value"><span id="dashAvgSales">—</span><span class="stat-unit">円</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- グラフ -->
+        <div id="dashChartArea" style="position:relative;height:240px;">
           <div class="loading"><div class="spinner"></div> 読み込み中...</div>
         </div>
       </div>
@@ -195,6 +244,116 @@
   }
 
   loadDashboard();
+
+  // ── 売上レポート ──────────────────────────────
+  let dashBarChart = null;
+
+  function fmtNum(n) {
+    return Number(n).toLocaleString('ja-JP');
+  }
+
+  async function loadSalesReport() {
+    const months = document.getElementById('dashMonthSelect').value;
+
+    document.getElementById('dashChartArea').innerHTML =
+      '<div class="loading"><div class="spinner"></div> 読み込み中...</div>';
+    document.getElementById('dashTotalSales').textContent  = '—';
+    document.getElementById('dashTotalVisits').textContent = '—';
+    document.getElementById('dashAvgSales').textContent    = '—';
+
+    const data = await getSalesReport(months);
+    if (!data) {
+      document.getElementById('dashChartArea').innerHTML =
+        '<div class="empty-state"><p>データの取得に失敗しました</p></div>';
+      return;
+    }
+
+    // サマリー
+    document.getElementById('dashTotalSales').textContent  = fmtNum(data.totalSales);
+    document.getElementById('dashTotalVisits').textContent = fmtNum(data.totalVisits);
+    const avg = data.totalVisits > 0 ? Math.round(data.totalSales / data.totalVisits) : 0;
+    document.getElementById('dashAvgSales').textContent = fmtNum(avg);
+
+    // グラフ描画
+    const labels   = data.byMonth.map(m => m.month.replace('/', '/'));
+    const sales    = data.byMonth.map(m => m.sales);
+    const visits   = data.byMonth.map(m => m.visits);
+    const hasPrices = data.totalSales > 0;
+
+    document.getElementById('dashChartArea').innerHTML = '<canvas id="dashSalesChart"></canvas>';
+    const ctx = document.getElementById('dashSalesChart').getContext('2d');
+
+    if (dashBarChart) dashBarChart.destroy();
+
+    const datasets = [];
+    if (hasPrices) {
+      datasets.push({
+        type: 'bar',
+        label: '売上 (円)',
+        data: sales,
+        backgroundColor: 'rgba(184,80,66,0.75)',
+        borderColor: '#B85042',
+        borderWidth: 1,
+        yAxisID: 'y1',
+        order: 2,
+      });
+    }
+    datasets.push({
+      type: 'line',
+      label: '来店件数',
+      data: visits,
+      borderColor: '#A7BEAE',
+      backgroundColor: 'rgba(167,190,174,0.15)',
+      pointBackgroundColor: '#A7BEAE',
+      pointRadius: 5,
+      tension: 0.3,
+      yAxisID: 'y2',
+      order: 1,
+    });
+
+    const scales = {
+      y2: {
+        type: 'linear',
+        position: hasPrices ? 'right' : 'left',
+        title: { display: true, text: '来店件数' },
+        beginAtZero: true,
+        ticks: { stepSize: 1 },
+        grid: { drawOnChartArea: !hasPrices },
+      },
+    };
+    if (hasPrices) {
+      scales.y1 = {
+        type: 'linear',
+        position: 'left',
+        title: { display: true, text: '売上 (円)' },
+        beginAtZero: true,
+        grid: { drawOnChartArea: true },
+      };
+    }
+
+    dashBarChart = new Chart(ctx, {
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = ctx.parsed.y;
+                if (ctx.dataset.label.includes('売上')) return ` ¥${fmtNum(v)}`;
+                return ` ${v} 件`;
+              }
+            }
+          }
+        },
+        scales,
+      }
+    });
+  }
+
+  loadSalesReport();
 </script>
 </body>
 </html>
