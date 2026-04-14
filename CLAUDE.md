@@ -18,7 +18,7 @@
 ```
 ユーザー（要望）
     ↓
-① 執筆担当エージェント（Agent toolで起動 → コードを書く）
+① 執筆担当エージェント（Agent toolで起動 → コードを書く＋デプロイ）
     ↓
 ② 検品担当エージェント（Agent toolで起動 → コードを確認）
     ↓
@@ -26,8 +26,13 @@
     ↓
 MEMORY.md更新（リーダーが直接更新）
     ↓
-git push（必要なら）
+git push（フロントエンド変更の場合）
 ```
+
+### 執筆担当のデプロイ責務
+- フロントエンド（.html/.js/.css）変更時 → `git add` `git commit` `git push`
+- GAS（.gs）変更時 → `clasp push --force` → `clasp deploy ...`
+- 両方変更した場合 → 両方実施
 
 ---
 
@@ -139,7 +144,30 @@ C:\Users\Owner\.claude\projects\C--Users-Owner-Documents------------\memory\MEMO
 ## デプロイ方法
 
 - フロントエンド変更 → `git add` → `git commit` → `git push` → GitHub Pagesに自動反映（1〜2分）
-- GAS変更 → GASエディタでデプロイ → 新バージョンとして公開
+- GAS変更 → **clasp で自動デプロイ**（下記コマンドを執筆担当が実行）
+
+### GAS自動デプロイ手順（執筆担当が実行）
+
+```bash
+# GASフォルダに移動
+cd "C:\Users\Owner\Documents\サロン顧客管理システム"
+
+# ① GASファイルをアップロード
+clasp push --force
+
+# ② 新バージョンとしてデプロイ
+clasp deploy --deploymentId AKfycbz5PxK8NqS981NweegzUG88wo1yaVDU37cUWrPXDu8VBV5ZXFoXFC3ZIzy_UAC4UwXrvA --description "変更内容の説明"
+```
+
+### clasp 設定情報
+- ログイン済みアカウント: fukuoka.color@gmail.com
+- `.clasp.json`: GASフォルダに配置済み
+- `.claspignore`: 不要ファイル（create_presentation.js等）を除外設定済み
+- GAS URL は変わらない（デプロイIDが同じため）
+
+### 注意
+- `create_presentation.js` / `generate_presentation.js` は `.claspignore` で除外済み。push対象に含めないこと
+- clasp push 後は必ず clasp deploy も実行すること（pushだけでは反映されない）
 
 ## 重要な注意点
 
