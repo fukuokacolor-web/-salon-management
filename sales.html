@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#B85042">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>売上レポート</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="layout">
+
+  <!-- サイドバー -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-en" id="salonNameSidebar">Salon</span>
+      <span class="logo-jp">サロン管理システム</span>
+      <span class="logo-sub">Admin Panel</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Menu</div>
+      <a href="dashboard.html" class="nav-item">
+        <span class="nav-icon">◈</span> ダッシュボード
+      </a>
+      <a href="reservations.html" class="nav-item">
+        <span class="nav-icon">◷</span> 予約管理
+      </a>
+      <a href="customers.html" class="nav-item">
+        <span class="nav-icon">◉</span> 顧客管理
+      </a>
+      <a href="sales.html" class="nav-item active">
+        <span class="nav-icon">◑</span> 売上レポート
+      </a>
+      <a href="settings.html" class="nav-item">
+        <span class="nav-icon">◎</span> 設定
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()">ログアウト</button>
+    </div>
+  </aside>
+
+  <!-- メインコンテンツ -->
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Sales Report</div>
+        <div class="page-subtitle">売上レポート</div>
+      </div>
+      <div class="header-right">
+        <select id="monthSelect" onchange="loadReport()" style="padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.9rem;background:#fff;cursor:pointer;">
+          <option value="3">直近3ヶ月</option>
+          <option value="6" selected>直近6ヶ月</option>
+          <option value="12">直近12ヶ月</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- サマリーカード -->
+      <div class="stat-grid" id="summaryCards">
+        <div class="stat-card">
+          <div class="stat-icon">💴</div>
+          <div>
+            <div class="stat-label">期間合計売上</div>
+            <div class="stat-value"><span id="totalSales">—</span><span class="stat-unit">円</span></div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✂️</div>
+          <div>
+            <div class="stat-label">期間合計来店</div>
+            <div class="stat-value"><span id="totalVisits">—</span><span class="stat-unit">件</span></div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📈</div>
+          <div>
+            <div class="stat-label">平均客単価</div>
+            <div class="stat-value"><span id="avgSales">—</span><span class="stat-unit">円</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 月別売上グラフ -->
+      <div class="card">
+        <div class="card-title">📊 月別来店件数・売上</div>
+        <div id="chartArea" style="position:relative;height:260px;">
+          <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+        </div>
+      </div>
+
+      <!-- メニュー別集計 -->
+      <div class="card">
+        <div class="card-title">✂️ メニュー別集計</div>
+        <div id="menuTableArea">
+          <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+        </div>
+      </div>
+
+      <!-- 実際の支払い記録 -->
+      <div class="card">
+        <div class="card-title">💴 実際の支払い記録</div>
+        <div id="paymentSummaryArea">
+          <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  checkAuth();
+  document.getElementById('salonNameSidebar').textContent = SALON_NAME;
+  document.title = '売上レポート - ' + SALON_NAME;
+
+  let barChart = null;
+
+  function fmt(n) {
+    return Number(n).toLocaleString('ja-JP');
+  }
+
+  async function loadReport() {
+    const months = document.getElementById('monthSelect').value;
+
+    document.getElementById('chartArea').innerHTML =
+      '<div class="loading"><div class="spinner"></div> 読み込み中...</div>';
+    document.getElementById('menuTableArea').innerHTML =
+      '<div class="loading"><div class="spinner"></div> 読み込み中...</div>';
+    document.getElementById('paymentSummaryArea').innerHTML =
+      '<div class="loading"><div class="spinner"></div> 読み込み中...</div>';
+    document.getElementById('totalSales').textContent  = '—';
+    document.getElementById('totalVisits').textContent = '—';
+    document.getElementById('avgSales').textContent    = '—';
+
+    const data = await getSalesReport(months);
+    if (!data) {
+      document.getElementById('chartArea').innerHTML =
+        '<div class="empty-state"><p>データの取得に失敗しました</p></div>';
+      return;
+    }
+
+    // サマリー
+    document.getElementById('totalSales').textContent  = fmt(data.totalSales);
+    document.getElementById('totalVisits').textContent = fmt(data.totalVisits);
+    const avg = data.totalVisits > 0 ? Math.round(data.totalSales / data.totalVisits) : 0;
+    document.getElementById('avgSales').textContent = fmt(avg);
+
+    // グラフ描画
+    const labels  = data.byMonth.map(m => m.month.replace('/', '/'));
+    const sales   = data.byMonth.map(m => m.sales);
+    const visits  = data.byMonth.map(m => m.visits);
+    const hasPrices = data.totalSales > 0;
+
+    document.getElementById('chartArea').innerHTML = '<canvas id="salesChart"></canvas>';
+    const ctx = document.getElementById('salesChart').getContext('2d');
+
+    if (barChart) barChart.destroy();
+
+    const datasets = [];
+    if (hasPrices) {
+      datasets.push({
+        type: 'bar',
+        label: '売上 (円)',
+        data: sales,
+        backgroundColor: 'rgba(184,80,66,0.75)',
+        borderColor: '#B85042',
+        borderWidth: 1,
+        yAxisID: 'y1',
+        order: 2,
+      });
+    }
+    datasets.push({
+      type: 'line',
+      label: '来店件数',
+      data: visits,
+      borderColor: '#A7BEAE',
+      backgroundColor: 'rgba(167,190,174,0.15)',
+      pointBackgroundColor: '#A7BEAE',
+      pointRadius: 5,
+      tension: 0.3,
+      yAxisID: 'y2',
+      order: 1,
+    });
+
+    const scales = {
+      y2: {
+        type: 'linear',
+        position: hasPrices ? 'right' : 'left',
+        title: { display: true, text: '来店件数' },
+        beginAtZero: true,
+        ticks: { stepSize: 1 },
+        grid: { drawOnChartArea: !hasPrices },
+      },
+    };
+    if (hasPrices) {
+      scales.y1 = {
+        type: 'linear',
+        position: 'left',
+        title: { display: true, text: '売上 (円)' },
+        beginAtZero: true,
+        grid: { drawOnChartArea: true },
+      };
+    }
+
+    barChart = new Chart(ctx, {
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = ctx.parsed.y;
+                if (ctx.dataset.label.includes('売上')) return ` ¥${fmt(v)}`;
+                return ` ${v} 件`;
+              }
+            }
+          }
+        },
+        scales,
+      }
+    });
+
+    // 支払い記録セクション
+    const payByMonth = data.paymentsByMonth || [];
+    const totalPay   = data.totalPaymentsAmount || 0;
+    const payEl = document.getElementById('paymentSummaryArea');
+
+    if (totalPay === 0) {
+      payEl.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">💴</div>
+          <p>支払い記録がありません</p>
+          <p style="font-size:0.85rem;color:var(--text-light);margin-top:8px;">
+            顧客詳細ページの「支払いを記録」ボタンから記録できます。
+          </p>
+        </div>`;
+    } else {
+      payEl.innerHTML = `
+        <div style="display:flex;gap:24px;margin-bottom:20px;flex-wrap:wrap;">
+          <div style="background:var(--gold-bg);border:1px solid var(--gold-light);border-radius:var(--radius-lg);padding:16px 24px;min-width:160px;">
+            <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:4px;">期間合計（実績）</div>
+            <div style="font-size:1.6rem;font-weight:700;color:var(--gold-dark);">¥${fmt(totalPay)}</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>月</th>
+                <th style="text-align:right;">件数</th>
+                <th style="text-align:right;">合計金額</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${payByMonth.filter(p => p.count > 0).map(p => `
+                <tr>
+                  <td>${p.month}</td>
+                  <td style="text-align:right;">${fmt(p.count)} 件</td>
+                  <td style="text-align:right;font-weight:600;">¥${fmt(p.amount)}</td>
+                </tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--text-light);">該当なし</td></tr>'}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    // メニュー別テーブル
+    const menu = data.menuTotals;
+    if (!menu || menu.length === 0) {
+      document.getElementById('menuTableArea').innerHTML =
+        '<div class="empty-state"><div class="empty-icon">🌿</div><p>来店記録がありません</p></div>';
+      return;
+    }
+
+    const priceNote = !hasPrices
+      ? '<p style="color:var(--text-light);font-size:0.85rem;margin-bottom:12px;">💡 メニュー単価を設定すると売上金額が表示されます（設定 → メニュー単価設定）</p>'
+      : '';
+
+    document.getElementById('menuTableArea').innerHTML = priceNote + `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>メニュー</th>
+              <th style="text-align:right;">来店件数</th>
+              ${hasPrices ? '<th style="text-align:right;">売上合計</th><th style="text-align:right;">構成比</th>' : ''}
+            </tr>
+          </thead>
+          <tbody>
+            ${menu.map(m => `
+              <tr>
+                <td>${m.menu || '（未設定）'}</td>
+                <td style="text-align:right;font-weight:600;">${fmt(m.visits)} 件</td>
+                ${hasPrices ? `
+                  <td style="text-align:right;">¥${fmt(m.sales)}</td>
+                  <td style="text-align:right;">
+                    <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+                      <div style="width:80px;height:6px;background:#eee;border-radius:3px;overflow:hidden;">
+                        <div style="width:${data.totalSales > 0 ? Math.round(m.sales/data.totalSales*100) : 0}%;height:100%;background:#B85042;border-radius:3px;"></div>
+                      </div>
+                      ${data.totalSales > 0 ? Math.round(m.sales/data.totalSales*100) : 0}%
+                    </div>
+                  </td>` : ''}
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  loadReport();
+</script>
+</body>
+</html>

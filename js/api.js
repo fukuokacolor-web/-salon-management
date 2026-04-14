@@ -118,3 +118,23 @@ async function saveClosedDays(dates, weekdays) {
 async function saveReservation(params) {
   return apiGet('saveReservation', params);
 }
+
+/** コース料金設定取得 */
+async function getCoursePrices() {
+  return apiGet('getCoursePrices');
+}
+
+/** コース料金設定保存 */
+async function saveCoursePrices(coursePrices) {
+  return apiGet('saveCoursePrices', { coursePrices: JSON.stringify(coursePrices) });
+}
+
+/** 支払いを記録 */
+async function recordPayment(params) {
+  return apiGet('recordPayment', params);
+}
+
+/** 支払い履歴取得 */
+async function getPaymentHistory(customerId) {
+  return apiGet('getPaymentHistory', { customerId });
+}

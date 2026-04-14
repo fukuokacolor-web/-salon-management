@@ -34,6 +34,9 @@
       <a href="customers.html" class="nav-item">
         <span class="nav-icon">◉</span> 顧客管理
       </a>
+      <a href="sales.html" class="nav-item">
+        <span class="nav-icon">◑</span> 売上レポート
+      </a>
       <a href="settings.html" class="nav-item active">
         <span class="nav-icon">◎</span> 設定
       </a>
@@ -53,6 +56,8 @@
     </div>
 
     <div class="page-body">
+
+      <!-- メニュー別ポイント設定 -->
       <div class="card">
         <div class="card-title">🎁 メニュー別ポイント設定</div>
         <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:20px;">
@@ -66,6 +71,69 @@
           <span id="saveMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
         </div>
       </div>
+
+      <!-- メニュー単価設定 -->
+      <div class="card">
+        <div class="card-title">💴 メニュー単価設定</div>
+        <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:20px;">
+          売上レポートに使用する各メニューの単価（円）を設定してください。
+        </p>
+        <div id="priceContent">
+          <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+        </div>
+        <div id="priceArea" style="display:none;margin-top:20px;">
+          <button class="btn btn-gold" onclick="savePrices()">保存する</button>
+          <span id="priceMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
+        </div>
+      </div>
+
+      <!-- コース料金設定 -->
+      <div class="card">
+        <div class="card-title">🎟 コース料金設定</div>
+        <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:20px;">
+          回数コース申し込み時に支払い記録へ自動入力される料金を設定します。
+        </p>
+        <div id="coursePriceContent">
+          <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+        </div>
+        <div id="coursePriceArea" style="display:none;margin-top:20px;">
+          <button class="btn btn-gold" onclick="saveCoursePriceSettings()">保存する</button>
+          <span id="coursePriceMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
+        </div>
+      </div>
+
+      <!-- 定休日設定 -->
+      <div class="card">
+        <div class="card-title">🚫 定休日設定</div>
+        <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:20px;">
+          定休曜日または特定の休業日を設定します。LINEから予約しようとした際にブロックされます。
+        </p>
+
+        <!-- 定休曜日 -->
+        <div style="margin-bottom:24px;">
+          <div style="font-weight:600;margin-bottom:10px;font-size:0.95rem;">定休曜日</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;" id="weekdayCheckboxes">
+            <!-- JS で生成 -->
+          </div>
+        </div>
+
+        <!-- 特定休業日 -->
+        <div>
+          <div style="font-weight:600;margin-bottom:10px;font-size:0.95rem;">特定休業日</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+            <input type="date" id="addDateInput"
+              style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;">
+            <button class="btn btn-gold" onclick="addClosedDate()">追加</button>
+          </div>
+          <div id="closedDateList" style="display:flex;flex-wrap:wrap;gap:8px;min-height:32px;"></div>
+        </div>
+
+        <div style="margin-top:20px;">
+          <button class="btn btn-gold" onclick="saveClosedDaysSettings()">保存する</button>
+          <span id="closedMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -75,6 +143,9 @@
   document.getElementById('salonNameSidebar').textContent = SALON_NAME;
   document.title = '設定 - ' + SALON_NAME;
 
+  // ────────────────────────────────────────────────
+  //  ポイント設定
+  // ────────────────────────────────────────────────
   let currentMenuPoints = {};
 
   async function loadSettings() {
@@ -84,25 +155,17 @@
         '<div class="empty-state"><p>データの取得に失敗しました</p></div>';
       return;
     }
-
-    currentMenuPoints = data.menuPoints || {};
-    const menuList    = data.menuList   || [];
-
+    currentMenuPoints    = data.menuPoints || {};
+    const menuList       = data.menuList   || [];
     if (menuList.length === 0) {
       document.getElementById('settingsContent').innerHTML =
         '<div class="empty-state"><div class="empty-icon">🌿</div><p>メニューが設定されていません。<br>GASのスクリプトプロパティ「MENU_LIST」を設定してください。</p></div>';
       return;
     }
-
     document.getElementById('settingsContent').innerHTML = `
       <div class="table-wrap">
         <table>
-          <thead>
-            <tr>
-              <th>メニュー名</th>
-              <th style="width:200px;">付与ポイント (pt)</th>
-            </tr>
-          </thead>
+          <thead><tr><th>メニュー名</th><th style="width:200px;">付与ポイント (pt)</th></tr></thead>
           <tbody>
             ${menuList.map(menu => `
               <tr>
@@ -112,42 +175,218 @@
                     id="pt_${encodeURIComponent(menu)}"
                     value="${currentMenuPoints[menu] || 0}"
                     style="width:120px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;text-align:right;"
-                    onchange="onPointChange('${menu.replace(/'/g, "\\'")}', this.value)">
+                    onchange="currentMenuPoints['${menu.replace(/'/g, "\\'")}'] = parseInt(this.value)||0">
                   <span style="color:var(--text-light);font-size:0.85rem;margin-left:4px;">pt</span>
                 </td>
               </tr>`).join('')}
           </tbody>
         </table>
       </div>`;
-
     document.getElementById('saveArea').style.display = 'block';
   }
 
-  function onPointChange(menu, value) {
-    currentMenuPoints[menu] = parseInt(value, 10) || 0;
-  }
-
   async function saveSettings() {
-    const btn = document.querySelector('.btn-gold');
-    btn.disabled    = true;
-    btn.textContent = '保存中...';
+    const btn = document.querySelector('#saveArea .btn-gold');
+    btn.disabled = true; btn.textContent = '保存中...';
     document.getElementById('saveMsg').textContent = '';
-
     const res = await saveMenuPoints(currentMenuPoints);
-
-    btn.disabled    = false;
-    btn.textContent = '保存する';
+    btn.disabled = false; btn.textContent = '保存する';
     if (res && res.success) {
-      document.getElementById('saveMsg').innerHTML =
-        '<span style="color:#2E7D4F;">✓ 保存しました</span>';
+      document.getElementById('saveMsg').innerHTML = '<span style="color:#2E7D4F;">✓ 保存しました</span>';
       setTimeout(() => { document.getElementById('saveMsg').textContent = ''; }, 3000);
     } else {
-      document.getElementById('saveMsg').innerHTML =
-        '<span style="color:#B71C1C;">保存に失敗しました</span>';
+      document.getElementById('saveMsg').innerHTML = '<span style="color:#B71C1C;">保存に失敗しました</span>';
     }
   }
 
+  // ────────────────────────────────────────────────
+  //  単価設定
+  // ────────────────────────────────────────────────
+  let currentMenuPrices = {};
+
+  async function loadPrices() {
+    const data = await getMenuPrices();
+    if (!data) {
+      document.getElementById('priceContent').innerHTML =
+        '<div class="empty-state"><p>データの取得に失敗しました</p></div>';
+      return;
+    }
+    currentMenuPrices = data.menuPrices || {};
+    const menuList    = data.menuList   || [];
+    if (menuList.length === 0) {
+      document.getElementById('priceContent').innerHTML =
+        '<div class="empty-state"><div class="empty-icon">🌿</div><p>メニューが設定されていません。</p></div>';
+      return;
+    }
+    document.getElementById('priceContent').innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>メニュー名</th><th style="width:200px;">単価 (円)</th></tr></thead>
+          <tbody>
+            ${menuList.map(menu => `
+              <tr>
+                <td>${menu}</td>
+                <td>
+                  <input type="number" min="0" step="100"
+                    id="price_${encodeURIComponent(menu)}"
+                    value="${currentMenuPrices[menu] || 0}"
+                    style="width:120px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;text-align:right;"
+                    onchange="currentMenuPrices['${menu.replace(/'/g, "\\'")}'] = parseInt(this.value)||0">
+                  <span style="color:var(--text-light);font-size:0.85rem;margin-left:4px;">円</span>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    document.getElementById('priceArea').style.display = 'block';
+  }
+
+  async function savePrices() {
+    const btn = document.querySelector('#priceArea .btn-gold');
+    btn.disabled = true; btn.textContent = '保存中...';
+    document.getElementById('priceMsg').textContent = '';
+    const res = await saveMenuPrices(currentMenuPrices);
+    btn.disabled = false; btn.textContent = '保存する';
+    if (res && res.success) {
+      document.getElementById('priceMsg').innerHTML = '<span style="color:#2E7D4F;">✓ 保存しました</span>';
+      setTimeout(() => { document.getElementById('priceMsg').textContent = ''; }, 3000);
+    } else {
+      document.getElementById('priceMsg').innerHTML = '<span style="color:#B71C1C;">保存に失敗しました</span>';
+    }
+  }
+
+  // ────────────────────────────────────────────────
+  //  定休日設定
+  // ────────────────────────────────────────────────
+  const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
+  let closedWeekdays = [];
+  let closedDates    = [];
+
+  function renderWeekdays() {
+    document.getElementById('weekdayCheckboxes').innerHTML = WEEKDAY_LABELS.map((label, i) => `
+      <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:0.9rem;background:${closedWeekdays.includes(i) ? '#B85042' : '#fff'};color:${closedWeekdays.includes(i) ? '#fff' : 'inherit'};">
+        <input type="checkbox" style="display:none;" ${closedWeekdays.includes(i) ? 'checked' : ''}
+          onchange="toggleWeekday(${i}, this.checked)">
+        ${label}曜
+      </label>`).join('');
+  }
+
+  function toggleWeekday(day, checked) {
+    if (checked && !closedWeekdays.includes(day)) closedWeekdays.push(day);
+    else if (!checked) closedWeekdays = closedWeekdays.filter(d => d !== day);
+    renderWeekdays();
+  }
+
+  function renderDates() {
+    const el = document.getElementById('closedDateList');
+    if (closedDates.length === 0) {
+      el.innerHTML = '<span style="color:var(--text-light);font-size:0.88rem;">特定休業日なし</span>';
+      return;
+    }
+    el.innerHTML = closedDates.sort().map(d => `
+      <span style="display:inline-flex;align-items:center;gap:6px;background:#FFF0EE;border:1px solid #F5BFBB;border-radius:20px;padding:4px 12px;font-size:0.88rem;">
+        ${d}
+        <button onclick="removeDate('${d}')"
+          style="background:none;border:none;cursor:pointer;color:#B85042;font-size:1rem;padding:0;line-height:1;">×</button>
+      </span>`).join('');
+  }
+
+  function addClosedDate() {
+    const input = document.getElementById('addDateInput');
+    const val   = input.value;
+    if (!val) return;
+    const dateStr = val.replace(/-/g, '/');
+    if (!closedDates.includes(dateStr)) {
+      closedDates.push(dateStr);
+      renderDates();
+    }
+    input.value = '';
+  }
+
+  function removeDate(d) {
+    closedDates = closedDates.filter(x => x !== d);
+    renderDates();
+  }
+
+  async function loadClosedDays() {
+    const data = await getClosedDays();
+    if (!data) return;
+    closedWeekdays = data.weekdays || [];
+    closedDates    = data.dates    || [];
+    renderWeekdays();
+    renderDates();
+  }
+
+  async function saveClosedDaysSettings() {
+    const btn = document.querySelector('#closedMsg').previousElementSibling;
+    btn.disabled = true; btn.textContent = '保存中...';
+    document.getElementById('closedMsg').textContent = '';
+    const res = await saveClosedDays(closedDates, closedWeekdays);
+    btn.disabled = false; btn.textContent = '保存する';
+    if (res && res.success) {
+      document.getElementById('closedMsg').innerHTML = '<span style="color:#2E7D4F;">✓ 保存しました</span>';
+      setTimeout(() => { document.getElementById('closedMsg').textContent = ''; }, 3000);
+    } else {
+      document.getElementById('closedMsg').innerHTML = '<span style="color:#B71C1C;">保存に失敗しました</span>';
+    }
+  }
+
+  // ────────────────────────────────────────────────
+  //  コース料金設定
+  // ────────────────────────────────────────────────
+  let currentCoursePrices = {};
+
+  async function loadCoursePrices() {
+    const data = await getCoursePrices();
+    if (!data) {
+      document.getElementById('coursePriceContent').innerHTML =
+        '<div class="empty-state"><p>データの取得に失敗しました</p></div>';
+      return;
+    }
+    currentCoursePrices = data.coursePrices || {};
+    const courseOptions = data.courseOptions || ['10', '12', '15'];
+    document.getElementById('coursePriceContent').innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>コース</th><th style="width:200px;">料金 (円)</th></tr></thead>
+          <tbody>
+            ${courseOptions.map(c => `
+              <tr>
+                <td>${c}回コース</td>
+                <td>
+                  <input type="number" min="0" step="1000"
+                    id="cp_${c}"
+                    value="${currentCoursePrices[c] || 0}"
+                    style="width:120px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;text-align:right;"
+                    onchange="currentCoursePrices['${c}'] = parseInt(this.value)||0">
+                  <span style="color:var(--text-light);font-size:0.85rem;margin-left:4px;">円</span>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    document.getElementById('coursePriceArea').style.display = 'block';
+  }
+
+  async function saveCoursePriceSettings() {
+    const btn = document.querySelector('#coursePriceArea .btn-gold');
+    btn.disabled = true; btn.textContent = '保存中...';
+    document.getElementById('coursePriceMsg').textContent = '';
+    const res = await saveCoursePrices(currentCoursePrices);
+    btn.disabled = false; btn.textContent = '保存する';
+    if (res && res.success) {
+      document.getElementById('coursePriceMsg').innerHTML = '<span style="color:#2E7D4F;">✓ 保存しました</span>';
+      setTimeout(() => { document.getElementById('coursePriceMsg').textContent = ''; }, 3000);
+    } else {
+      document.getElementById('coursePriceMsg').innerHTML = '<span style="color:#B71C1C;">保存に失敗しました</span>';
+    }
+  }
+
+  // 初期ロード
   loadSettings();
+  loadPrices();
+  loadCoursePrices();
+  loadClosedDays();
 </script>
 </body>
 </html>

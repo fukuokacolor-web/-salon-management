@@ -133,6 +133,9 @@
       <a href="customers.html" class="nav-item active">
         <span class="nav-icon">◉</span> 顧客管理
       </a>
+      <a href="sales.html" class="nav-item">
+        <span class="nav-icon">◑</span> 売上レポート
+      </a>
       <a href="settings.html" class="nav-item">
         <span class="nav-icon">◎</span> 設定
       </a>
@@ -160,6 +163,17 @@
       <!-- プランカード -->
       <div id="planCard"></div>
 
+      <!-- 支払い記録 -->
+      <div class="card">
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>💴 支払い記録</span>
+          <button class="btn btn-gold" style="font-size:0.85rem;padding:6px 14px;" onclick="openPaymentModal()">＋ 支払いを記録</button>
+        </div>
+        <div id="paymentContent">
+          <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+        </div>
+      </div>
+
       <!-- 来店記録 -->
       <div class="card">
         <div class="card-title">📅 来店記録</div>
@@ -167,6 +181,51 @@
           <div class="loading"><div class="spinner"></div> 読み込み中...</div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 支払い記録モーダル -->
+<div class="modal-overlay" id="paymentModal">
+  <div class="modal-box">
+    <div class="modal-title">💴 支払いを記録</div>
+    <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px;">
+      <div>
+        <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:6px;">種別</div>
+        <select id="paymentType" onchange="onPaymentTypeChange()"
+          style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;">
+          <option value="都度払い">都度払い</option>
+          <option value="コース申込">コース申込</option>
+        </select>
+      </div>
+      <div id="paymentContentWrap">
+        <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:6px;">内容（メニュー名など）</div>
+        <input type="text" id="paymentContent" placeholder="例：カラー、トリートメントなど"
+          style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;box-sizing:border-box;">
+      </div>
+      <div id="paymentCourseWrap" style="display:none;">
+        <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:6px;">コース</div>
+        <select id="paymentCourse" onchange="onPaymentCourseChange()"
+          style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;">
+          <option value="10">10回コース</option>
+          <option value="12">12回コース</option>
+          <option value="15">15回コース</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:6px;">金額（円）</div>
+        <input type="number" id="paymentAmount" min="0" step="100" placeholder="0"
+          style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;box-sizing:border-box;">
+      </div>
+      <div>
+        <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:6px;">備考（任意）</div>
+        <input type="text" id="paymentNote" placeholder="例：クーポン使用など"
+          style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;box-sizing:border-box;">
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closePaymentModal()">キャンセル</button>
+      <button class="btn btn-gold" onclick="savePayment()">記録する</button>
     </div>
   </div>
 </div>
@@ -283,9 +342,121 @@
     }
   }
 
-  // モーダル外クリックで閉じる
+  // プランモーダル外クリックで閉じる
   document.getElementById('planModal').addEventListener('click', function(e) {
     if (e.target === this) closePlanModal();
+  });
+
+  // ─── 支払い履歴 ──────────────────────────────────────────────
+  async function loadPaymentHistory() {
+    const data = await getPaymentHistory(customerId);
+    const el = document.getElementById('paymentContent');
+    const payments = data?.payments || [];
+    if (payments.length === 0) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">💴</div><p>支払い記録がありません</p></div>';
+      return;
+    }
+    el.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>日付</th>
+              <th>種別</th>
+              <th>内容</th>
+              <th style="text-align:right;">金額</th>
+              <th>備考</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${payments.map(p => `
+              <tr>
+                <td style="white-space:nowrap;">${p.date}</td>
+                <td><span class="badge ${p.type === 'コース申込' ? 'badge-gold' : ''}" style="${p.type !== 'コース申込' ? 'background:#f0f4f8;color:#555;' : ''}">${p.type}</span></td>
+                <td>${p.content || '—'}</td>
+                <td style="text-align:right;font-weight:600;">¥${Number(p.amount).toLocaleString('ja-JP')}</td>
+                <td style="color:var(--text-light);font-size:0.85rem;">${p.note || ''}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  // ─── 支払いモーダル制御 ───────────────────────────────────────
+  let cachedCoursePrices = null;
+
+  async function openPaymentModal() {
+    if (!cachedCoursePrices) {
+      const data = await getCoursePrices();
+      cachedCoursePrices = data?.coursePrices || {};
+    }
+    document.getElementById('paymentType').value    = '都度払い';
+    document.getElementById('paymentContent').value = '';
+    document.getElementById('paymentAmount').value  = '';
+    document.getElementById('paymentNote').value    = '';
+    document.getElementById('paymentContentWrap').style.display = 'block';
+    document.getElementById('paymentCourseWrap').style.display  = 'none';
+    document.getElementById('paymentModal').classList.add('open');
+  }
+
+  function closePaymentModal() {
+    document.getElementById('paymentModal').classList.remove('open');
+  }
+
+  function onPaymentTypeChange() {
+    const type = document.getElementById('paymentType').value;
+    const isCourse = type === 'コース申込';
+    document.getElementById('paymentContentWrap').style.display = isCourse ? 'none' : 'block';
+    document.getElementById('paymentCourseWrap').style.display  = isCourse ? 'block' : 'none';
+    if (isCourse) onPaymentCourseChange();
+  }
+
+  function onPaymentCourseChange() {
+    const c = document.getElementById('paymentCourse').value;
+    const price = cachedCoursePrices?.[c] || 0;
+    document.getElementById('paymentAmount').value = price || '';
+  }
+
+  async function savePayment() {
+    const type    = document.getElementById('paymentType').value;
+    const isCourse = type === 'コース申込';
+    const content = isCourse
+      ? document.getElementById('paymentCourse').value + '回コース'
+      : document.getElementById('paymentContent').value.trim();
+    const amount  = parseInt(document.getElementById('paymentAmount').value) || 0;
+    const note    = document.getElementById('paymentNote').value.trim();
+
+    if (amount <= 0) { alert('金額を入力してください'); return; }
+
+    const btn = document.querySelector('#paymentModal .btn-gold');
+    btn.disabled = true; btn.textContent = '記録中...';
+
+    const courseNum = isCourse ? document.getElementById('paymentCourse').value : '';
+
+    const [res, planRes] = await Promise.all([
+      recordPayment({
+        customerId,
+        name    : currentCustomer?.name || '',
+        type,
+        content,
+        amount  : String(amount),
+        note,
+      }),
+      isCourse ? setPlan(customerId, '回数コース', courseNum) : Promise.resolve(null),
+    ]);
+
+    btn.disabled = false; btn.textContent = '記録する';
+    if (res?.success) {
+      closePaymentModal();
+      loadDetail();        // プランカード・残回数を更新
+      loadPaymentHistory();
+    } else {
+      alert('記録に失敗しました: ' + (res?.message || ''));
+    }
+  }
+
+  document.getElementById('paymentModal').addEventListener('click', function(e) {
+    if (e.target === this) closePaymentModal();
   });
 
   function formatDate(val) {
@@ -365,6 +536,7 @@
   }
 
   loadDetail();
+  if (customerId) loadPaymentHistory();
 </script>
 </body>
 </html>
