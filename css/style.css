@@ -489,64 +489,53 @@ tbody tr:last-child td { border-bottom: none; }
 .header-right { display: flex; align-items: center; gap: 12px; }
 .header-date { font-size: 0.8rem; color: var(--text-light); }
 
-/* ─── モバイルヘッダー ───────────────────────── */
-.mobile-header {
+/* ─── 画面下部タブバー（スマホ専用） ─────────── */
+.mobile-tab-bar {
   display: none;
   position: fixed;
-  top: 0; left: 0; right: 0;
-  height: 56px;
+  bottom: 0; left: 0; right: 0;
+  height: 60px;
   background: var(--sidebar-bg);
   z-index: 200;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.25);
+}
+.mobile-tab-bar-inner {
+  display: flex;
+  height: 100%;
+}
+.mobile-tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  justify-content: center;
+  gap: 3px;
+  color: rgba(255,255,255,0.5);
+  text-decoration: none;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  padding: 6px 4px;
+  transition: color 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
-.mobile-header-logo {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.1rem;
-  color: var(--gold);
-  letter-spacing: 0.08em;
+.mobile-tab-item:hover {
+  color: rgba(255,255,255,0.8);
 }
-.mobile-hamburger {
-  background: transparent;
-  border: none;
+.mobile-tab-item.active {
   color: var(--gold);
-  font-size: 1.5rem;
-  padding: 4px 8px;
+}
+.mobile-tab-icon {
+  font-size: 1.3rem;
   line-height: 1;
-  cursor: pointer;
-  border-radius: var(--radius);
-  transition: background 0.2s;
-}
-.mobile-hamburger:hover {
-  background: rgba(201,169,110,0.15);
-}
-
-/* ─── モバイルオーバーレイ ───────────────────── */
-.sidebar-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.55);
-  z-index: 150;
-}
-.sidebar-overlay.open {
-  display: block;
 }
 
 /* ─── レスポンシブ ───────────────────────────── */
 @media (max-width: 768px) {
-  .mobile-header { display: flex; }
-  .sidebar {
-    transform: translateX(-100%);
-    z-index: 160;
-    top: 0;
-  }
-  .sidebar.open { transform: translateX(0); }
+  .mobile-tab-bar { display: block; }
+  .sidebar { display: none; }
   .main-content {
     margin-left: 0;
-    padding-top: 56px;
+    padding-bottom: 60px;
   }
   .stat-grid { grid-template-columns: 1fr; }
   .page-body { padding: 16px; }

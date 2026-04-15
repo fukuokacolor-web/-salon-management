@@ -174,13 +174,26 @@
   </style>
 </head>
 <body>
-<!-- モバイルヘッダー -->
-<div class="mobile-header">
-  <span class="mobile-header-logo" id="mobileHeaderLogo">Salon</span>
-  <button class="mobile-hamburger" id="menuToggle" aria-label="メニューを開く">☰</button>
-</div>
-<!-- サイドバーオーバーレイ -->
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<!-- 画面下部タブバー（スマホ専用） -->
+<nav class="mobile-tab-bar">
+  <div class="mobile-tab-bar-inner">
+    <a href="dashboard.html" class="mobile-tab-item">
+      <span class="mobile-tab-icon">🏠</span>ホーム
+    </a>
+    <a href="reservations.html" class="mobile-tab-item active">
+      <span class="mobile-tab-icon">📅</span>予約
+    </a>
+    <a href="customers.html" class="mobile-tab-item">
+      <span class="mobile-tab-icon">👥</span>顧客
+    </a>
+    <a href="sales.html" class="mobile-tab-item">
+      <span class="mobile-tab-icon">📊</span>売上
+    </a>
+    <a href="settings.html" class="mobile-tab-item">
+      <span class="mobile-tab-icon">⚙️</span>設定
+    </a>
+  </div>
+</nav>
 
 <div class="layout">
 
@@ -307,21 +320,7 @@
 <script>
   checkAuth();
   document.getElementById('salonNameSidebar').textContent = SALON_NAME;
-  document.getElementById('mobileHeaderLogo').textContent = SALON_NAME;
   document.title = '予約管理 - ' + SALON_NAME;
-
-  // ハンバーガーメニュー
-  (function() {
-    const sidebar  = document.getElementById('sidebar');
-    const overlay  = document.getElementById('sidebarOverlay');
-    const toggle   = document.getElementById('menuToggle');
-    function openMenu()  { sidebar.classList.add('open'); overlay.classList.add('open'); }
-    function closeMenu() { sidebar.classList.remove('open'); overlay.classList.remove('open'); }
-    toggle.addEventListener('click', function() {
-      sidebar.classList.contains('open') ? closeMenu() : openMenu();
-    });
-    overlay.addEventListener('click', closeMenu);
-  })();
 
   let currentYear  = new Date().getFullYear();
   let currentMonth = new Date().getMonth() + 1;
