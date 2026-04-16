@@ -6,7 +6,7 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#B85042">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>ダッシュボード</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="js/config.js"></script>
@@ -230,9 +230,10 @@
           <div style="font-size:0.85rem;color:var(--text-light);margin-bottom:8px;">${r.menu || '—'}</div>
           <div style="margin-bottom:8px;">${planBadge(r)}</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${r.status !== 'キャンセル'
-              ? `<button class="btn btn-danger" onclick="doCancel(${r.row}, this)">キャンセル</button>`
-              : '—'}
+            ${r.status === '完了' || r.status === 'キャンセル'
+              ? '—'
+              : `<button class="btn btn-gold" onclick="doComplete(${r.row}, this)">✓ 完了</button>
+                 <button class="btn btn-danger" onclick="doCancel(${r.row}, this)">キャンセル</button>`}
           </div>
         </div>`).join('');
     } else {
@@ -261,14 +262,29 @@
                   <td>${r.phone || '—'}</td>
                   <td>${statusBadge(r.status)}</td>
                   <td>
-                    ${r.status !== 'キャンセル'
-                      ? `<button class="btn btn-danger" onclick="doCancel(${r.row}, this)">キャンセル</button>`
-                      : '—'}
+                    ${r.status === '完了' || r.status === 'キャンセル'
+                      ? (r.status === '完了' ? '<span style="color:#2E7D4F;font-size:0.82rem;">✓ 完了</span>' : '—')
+                      : `<button class="btn btn-gold btn-sm" onclick="doComplete(${r.row}, this)">✓ 完了</button>
+                         <button class="btn btn-danger" onclick="doCancel(${r.row}, this)">キャンセル</button>`}
                   </td>
                 </tr>`).join('')}
             </tbody>
           </table>
         </div>`;
+    }
+  }
+
+  async function doComplete(row, btn) {
+    if (!confirm('来店完了にしますか？\nメニューに応じたポイントが自動で付与されます。')) return;
+    btn.disabled    = true;
+    btn.textContent = '処理中...';
+    const res = await completeReservation(row);
+    if (res && res.success) {
+      loadDashboard();
+    } else {
+      alert('処理に失敗しました: ' + (res && res.message ? res.message : ''));
+      btn.disabled    = false;
+      btn.textContent = '✓ 完了';
     }
   }
 
