@@ -83,7 +83,7 @@
     <div class="page-body">
 
       <!-- 統計カード -->
-      <div class="stat-grid">
+      <div class="stat-grid stat-grid-4">
         <div class="stat-card">
           <div class="stat-icon">📅</div>
           <div>
@@ -96,6 +96,13 @@
           <div>
             <div class="stat-label">今月の予約</div>
             <div class="stat-value"><span id="statMonth">—</span><span class="stat-unit">件</span></div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💴</div>
+          <div>
+            <div class="stat-label">今月の売上</div>
+            <div class="stat-value" style="font-size:1.5rem;"><span id="statMonthSales">—</span></div>
           </div>
         </div>
         <div class="stat-card">
@@ -202,6 +209,7 @@
     document.getElementById('statToday').textContent    = data.todayCount    ?? 0;
     document.getElementById('statMonth').textContent    = data.monthCount    ?? 0;
     document.getElementById('statCustomer').textContent = data.customerCount ?? 0;
+    document.getElementById('statMonthSales').textContent = `¥${(data.monthSales || 0).toLocaleString('ja-JP')}`;
     document.getElementById('todayBadge').textContent   = `本日 ${data.todayCount ?? 0} 件`;
 
     const list = data.todayReservations || [];
@@ -229,11 +237,11 @@
           </div>
           <div style="font-size:0.85rem;color:var(--text-light);margin-bottom:8px;">${r.menu || '—'}</div>
           <div style="margin-bottom:8px;">${planBadge(r)}</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div style="display:flex;gap:8px;align-items:center;">
             ${r.status === '完了' || r.status === 'キャンセル'
               ? '—'
-              : `<button class="btn btn-gold" onclick="doComplete(${r.row}, this)">✓ 完了</button>
-                 <button class="btn btn-danger" onclick="doCancel(${r.row}, this)">キャンセル</button>`}
+              : `<button class="btn btn-complete" style="flex:1;" onclick="doComplete(${r.row}, this)">✓ 完了</button>
+                 <button class="btn btn-danger btn-sm" onclick="doCancel(${r.row}, this)">キャンセル</button>`}
           </div>
         </div>`).join('');
     } else {
@@ -264,8 +272,8 @@
                   <td>
                     ${r.status === '完了' || r.status === 'キャンセル'
                       ? (r.status === '完了' ? '<span style="color:#2E7D4F;font-size:0.82rem;">✓ 完了</span>' : '—')
-                      : `<button class="btn btn-gold btn-sm" onclick="doComplete(${r.row}, this)">✓ 完了</button>
-                         <button class="btn btn-danger" onclick="doCancel(${r.row}, this)">キャンセル</button>`}
+                      : `<button class="btn btn-complete" onclick="doComplete(${r.row}, this)">✓ 完了</button>
+                         <button class="btn btn-danger btn-sm" onclick="doCancel(${r.row}, this)">キャンセル</button>`}
                   </td>
                 </tr>`).join('')}
             </tbody>
