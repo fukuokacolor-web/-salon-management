@@ -78,80 +78,96 @@
 
     <div class="page-body">
 
+      <!-- タブナビゲーション -->
+      <div class="settings-tabs">
+        <button class="settings-tab active" onclick="showSection('section-point', this)">🎁 ポイント設定</button>
+        <button class="settings-tab" onclick="showSection('section-price', this)">💴 メニュー単価</button>
+        <button class="settings-tab" onclick="showSection('section-course', this)">🎟 コース料金</button>
+        <button class="settings-tab" onclick="showSection('section-closed', this)">🚫 定休日設定</button>
+      </div>
+
       <!-- メニュー別ポイント設定 -->
-      <div class="card">
-        <div class="card-title">🎁 メニュー別ポイント設定</div>
-        <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:20px;">
-          各メニューで来店完了時に付与するポイント数を設定してください。
-        </p>
-        <div id="settingsContent">
-          <div class="loading"><div class="spinner"></div> 読み込み中...</div>
-        </div>
-        <div id="saveArea" style="display:none;margin-top:20px;">
-          <button class="btn btn-gold" onclick="saveSettings()">保存する</button>
-          <span id="saveMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
+      <div id="section-point">
+        <div class="card">
+          <div class="card-title">🎁 メニュー別ポイント設定</div>
+          <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:20px;">
+            各メニューで来店完了時に付与するポイント数を設定してください。
+          </p>
+          <div id="settingsContent">
+            <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+          </div>
+          <div id="saveArea" style="display:none;margin-top:20px;">
+            <button class="btn btn-gold" onclick="saveSettings()">保存する</button>
+            <span id="saveMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
+          </div>
         </div>
       </div>
 
       <!-- メニュー単価設定 -->
-      <div class="card">
-        <div class="card-title">💴 メニュー単価設定</div>
-        <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:20px;">
-          売上レポートに使用する各メニューの単価（円）を設定してください。
-        </p>
-        <div id="priceContent">
-          <div class="loading"><div class="spinner"></div> 読み込み中...</div>
-        </div>
-        <div id="priceArea" style="display:none;margin-top:20px;">
-          <button class="btn btn-gold" onclick="savePrices()">保存する</button>
-          <span id="priceMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
+      <div id="section-price" style="display:none;">
+        <div class="card">
+          <div class="card-title">💴 メニュー単価設定</div>
+          <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:20px;">
+            売上レポートに使用する各メニューの単価（円）を設定してください。
+          </p>
+          <div id="priceContent">
+            <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+          </div>
+          <div id="priceArea" style="display:none;margin-top:20px;">
+            <button class="btn btn-gold" onclick="savePrices()">保存する</button>
+            <span id="priceMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
+          </div>
         </div>
       </div>
 
       <!-- コース料金設定 -->
-      <div class="card">
-        <div class="card-title">🎟 コース料金設定</div>
-        <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:20px;">
-          回数コース申し込み時に支払い記録へ自動入力される料金を設定します。
-        </p>
-        <div id="coursePriceContent">
-          <div class="loading"><div class="spinner"></div> 読み込み中...</div>
-        </div>
-        <div id="coursePriceArea" style="display:none;margin-top:20px;">
-          <button class="btn btn-gold" onclick="saveCoursePriceSettings()">保存する</button>
-          <span id="coursePriceMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
+      <div id="section-course" style="display:none;">
+        <div class="card">
+          <div class="card-title">🎟 コース料金設定</div>
+          <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:20px;">
+            回数コース申し込み時に支払い記録へ自動入力される料金を設定します。
+          </p>
+          <div id="coursePriceContent">
+            <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+          </div>
+          <div id="coursePriceArea" style="display:none;margin-top:20px;">
+            <button class="btn btn-gold" onclick="saveCoursePriceSettings()">保存する</button>
+            <span id="coursePriceMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
+          </div>
         </div>
       </div>
 
       <!-- 定休日設定 -->
-      <div class="card">
-        <div class="card-title">🚫 定休日設定</div>
-        <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:20px;">
-          定休曜日または特定の休業日を設定します。LINEから予約しようとした際にブロックされます。
-        </p>
+      <div id="section-closed" style="display:none;">
+        <div class="card">
+          <div class="card-title">🚫 定休日設定</div>
+          <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:20px;">
+            定休曜日または特定の休業日を設定します。LINEから予約しようとした際にブロックされます。
+          </p>
 
-        <!-- 定休曜日 -->
-        <div style="margin-bottom:24px;">
-          <div style="font-weight:600;margin-bottom:10px;font-size:0.95rem;">定休曜日</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;" id="weekdayCheckboxes">
-            <!-- JS で生成 -->
+          <!-- 定休曜日 -->
+          <div style="margin-bottom:24px;">
+            <div style="font-weight:600;margin-bottom:10px;font-size:0.95rem;">定休曜日</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;" id="weekdayCheckboxes">
+              <!-- JS で生成 -->
+            </div>
           </div>
-        </div>
 
-        <!-- 特定休業日 -->
-        <div>
-          <div style="font-weight:600;margin-bottom:10px;font-size:0.95rem;">特定休業日</div>
-          <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
-            <input type="date" id="addDateInput"
-              style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;">
-            <button class="btn btn-gold" onclick="addClosedDate()">追加</button>
+          <!-- 特定休業日 -->
+          <div>
+            <div style="font-weight:600;margin-bottom:10px;font-size:0.95rem;">特定休業日</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+              <input type="date" id="addDateInput"
+                style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;">
+              <button class="btn btn-gold" onclick="addClosedDate()">追加</button>
+            </div>
+            <div id="closedDateList" style="display:flex;flex-wrap:wrap;gap:8px;min-height:32px;"></div>
           </div>
-          <div id="closedDateList" style="display:flex;flex-wrap:wrap;gap:8px;min-height:32px;"></div>
-        </div>
 
-        <div style="margin-top:20px;">
-          <button class="btn btn-gold" onclick="saveClosedDaysSettings()">保存する</button>
-          <span id="closedMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
+          <div style="margin-top:20px;">
+            <button class="btn btn-gold" onclick="saveClosedDaysSettings()">保存する</button>
+            <span id="closedMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
+          </div>
         </div>
       </div>
 
@@ -163,6 +179,19 @@
   checkAuth();
   document.getElementById('salonNameSidebar').textContent = SALON_NAME;
   document.title = '設定 - ' + SALON_NAME;
+
+  // ────────────────────────────────────────────────
+  //  タブ切り替え
+  // ────────────────────────────────────────────────
+  const SECTION_IDS = ['section-point', 'section-price', 'section-course', 'section-closed'];
+
+  function showSection(id, tabEl) {
+    SECTION_IDS.forEach(sid => {
+      document.getElementById(sid).style.display = (sid === id) ? 'block' : 'none';
+    });
+    document.querySelectorAll('.settings-tab').forEach(btn => btn.classList.remove('active'));
+    if (tabEl) tabEl.classList.add('active');
+  }
 
   // ────────────────────────────────────────────────
   //  ポイント設定
