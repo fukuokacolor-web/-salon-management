@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#B85042">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>交換管理</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <style>
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      padding: 0 0 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .tab-btn {
+      padding: 8px 20px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: var(--white);
+      color: var(--text-light);
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: #fff;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .btn-primary {
+      padding: 9px 20px;
+      background: var(--gold);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+
+    .btn-sm {
+      padding: 5px 12px;
+      border-radius: var(--radius);
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1.5px solid var(--border);
+      background: var(--white);
+      color: var(--text);
+      transition: all 0.2s;
+    }
+    .btn-sm:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-sm.btn-danger { border-color: #e05; color: #e05; }
+    .btn-sm.btn-danger:hover { background: #e05; color: #fff; }
+    .btn-sm.btn-success { border-color: #0a8; color: #0a8; }
+    .btn-sm.btn-success:hover { background: #0a8; color: #fff; }
+    .btn-sm.btn-reject { border-color: #888; color: #888; }
+    .btn-sm.btn-reject:hover { background: #888; color: #fff; }
+
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .filter-btn {
+      padding: 5px 14px;
+      border-radius: 16px;
+      border: 1.5px solid var(--border);
+      background: var(--white);
+      color: var(--text-light);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .filter-btn.active {
+      background: var(--gold-bg);
+      border-color: var(--gold);
+      color: var(--gold-dark);
+      font-weight: 600;
+    }
+
+    .badge-status {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-pending  { background: #FFF3CD; color: #856404; }
+    .badge-complete { background: #D1E7DD; color: #0f5132; }
+    .badge-rejected { background: #F8D7DA; color: #842029; }
+
+    /* モーダル */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      width: 480px;
+      max-width: 95vw;
+      box-shadow: var(--shadow-md);
+    }
+    .modal-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+      color: var(--text);
+    }
+    .form-row { margin-bottom: 14px; }
+    .form-label { font-size: 0.8rem; color: var(--text-light); margin-bottom: 4px; display: block; }
+    .form-input {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      color: var(--text);
+      transition: border-color 0.2s;
+    }
+    .form-input:focus { outline: none; border-color: var(--gold); }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .btn-cancel-modal {
+      padding: 9px 20px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--white);
+      color: var(--text-light);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<!-- 画面下部タブバー（スマホ専用） -->
+<nav class="mobile-tab-bar">
+  <div class="mobile-tab-bar-inner">
+    <a href="dashboard.html" class="mobile-tab-item">
+      <span class="mobile-tab-icon">🏠</span>ホーム
+    </a>
+    <a href="reservations.html" class="mobile-tab-item">
+      <span class="mobile-tab-icon">📅</span>予約
+    </a>
+    <a href="customers.html" class="mobile-tab-item">
+      <span class="mobile-tab-icon">👥</span>顧客
+    </a>
+    <a href="sales.html" class="mobile-tab-item">
+      <span class="mobile-tab-icon">📊</span>売上
+    </a>
+    <a href="settings.html" class="mobile-tab-item">
+      <span class="mobile-tab-icon">⚙️</span>設定
+    </a>
+  </div>
+</nav>
+
+<div class="layout">
+
+  <!-- サイドバー -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-en" id="salonNameSidebar">Salon</span>
+      <span class="logo-jp">サロン管理システム</span>
+      <span class="logo-sub">Admin Panel</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Menu</div>
+      <a href="dashboard.html" class="nav-item">
+        <span class="nav-icon">◈</span> ダッシュボード
+      </a>
+      <a href="reservations.html" class="nav-item">
+        <span class="nav-icon">◷</span> 予約管理
+      </a>
+      <a href="customers.html" class="nav-item">
+        <span class="nav-icon">◉</span> 顧客管理
+      </a>
+      <a href="sales.html" class="nav-item">
+        <span class="nav-icon">◑</span> 売上レポート
+      </a>
+      <a href="settings.html" class="nav-item">
+        <span class="nav-icon">◎</span> 設定
+      </a>
+      <a href="exchange-admin.html" class="nav-item active">
+        <span class="nav-icon">◈</span> 交換管理
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()">ログアウト</button>
+    </div>
+  </aside>
+
+  <!-- メインコンテンツ -->
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Exchange</div>
+        <div class="page-subtitle">ポイント交換管理</div>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- タブ -->
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('products')">交換商品管理</button>
+        <button class="tab-btn" onclick="switchTab('requests')">交換申請一覧</button>
+      </div>
+
+      <!-- タブ1: 交換商品管理 -->
+      <div id="tab-products" class="tab-panel active">
+        <div class="card">
+          <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+            <span>交換商品一覧</span>
+            <button class="btn-primary" onclick="openProductModal()">＋ 商品を追加</button>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="productsTable">
+              <thead>
+                <tr>
+                  <th>商品ID</th>
+                  <th>商品名</th>
+                  <th>必要ポイント</th>
+                  <th>在庫数</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="productsTbody">
+                <tr><td colspan="5" class="text-center">読み込み中...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- タブ2: 交換申請一覧 -->
+      <div id="tab-requests" class="tab-panel">
+        <div class="card">
+          <div class="card-title">交換申請一覧</div>
+          <div class="filter-bar">
+            <button class="filter-btn active" onclick="filterRequests('')">すべて</button>
+            <button class="filter-btn" onclick="filterRequests('申請中')">申請中</button>
+            <button class="filter-btn" onclick="filterRequests('完了')">完了</button>
+            <button class="filter-btn" onclick="filterRequests('却下')">却下</button>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="requestsTable">
+              <thead>
+                <tr>
+                  <th>申請日</th>
+                  <th>申請ID</th>
+                  <th>顧客名</th>
+                  <th>商品名</th>
+                  <th>消費PT</th>
+                  <th>ステータス</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="requestsTbody">
+                <tr><td colspan="7" class="text-center">読み込み中...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-body -->
+  </div><!-- /main-content -->
+</div><!-- /layout -->
+
+<!-- 商品追加・編集モーダル -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal-box">
+    <div class="modal-title" id="productModalTitle">商品を追加</div>
+    <input type="hidden" id="editProductId">
+    <div class="form-row">
+      <label class="form-label">商品名 <span style="color:#e05;">*</span></label>
+      <input class="form-input" id="fieldProductName" type="text" placeholder="例: トリートメントセット">
+    </div>
+    <div class="form-row">
+      <label class="form-label">必要ポイント <span style="color:#e05;">*</span></label>
+      <input class="form-input" id="fieldPointsRequired" type="number" min="1" placeholder="例: 500">
+    </div>
+    <div class="form-row">
+      <label class="form-label">在庫数</label>
+      <input class="form-input" id="fieldStock" type="number" min="0" placeholder="例: 10（空欄可）">
+    </div>
+    <div class="form-row">
+      <label class="form-label">画像URL</label>
+      <input class="form-input" id="fieldImageUrl" type="url" placeholder="https://...">
+    </div>
+    <div class="form-row">
+      <label class="form-label">説明</label>
+      <textarea class="form-input" id="fieldDescription" rows="3" placeholder="商品の説明（任意）"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel-modal" onclick="closeProductModal()">キャンセル</button>
+      <button class="btn-primary" onclick="saveProduct()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── 状態 ─────────────────────────────────────────────────────
+let allRequests = [];
+let currentFilter = '';
+
+// ─── 初期化 ───────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  requireAuth();
+  const name = getSalonName();
+  if (name) document.getElementById('salonNameSidebar').textContent = name;
+  await loadProducts();
+});
+
+// ─── タブ切り替え ─────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', (tab === 'products' && i === 0) || (tab === 'requests' && i === 1));
+  });
+  document.getElementById('tab-products').classList.toggle('active', tab === 'products');
+  document.getElementById('tab-requests').classList.toggle('active', tab === 'requests');
+  if (tab === 'requests') loadRequests();
+}
+
+// ─── 商品一覧 ─────────────────────────────────────────────────
+async function loadProducts() {
+  const res = await getExchangeProducts();
+  const tbody = document.getElementById('productsTbody');
+  if (!res || !res.products || res.products.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color:var(--text-light);">交換商品が登録されていません</td></tr>';
+    return;
+  }
+  tbody.innerHTML = res.products.map(p => `
+    <tr>
+      <td><span style="color:var(--text-light);font-size:0.8rem;">${esc(p.id)}</span></td>
+      <td><strong>${esc(p.name)}</strong>${p.description ? `<br><span style="font-size:0.78rem;color:var(--text-light);">${esc(p.description)}</span>` : ''}</td>
+      <td><span style="font-weight:700;color:var(--gold-dark);">${p.pointsRequired.toLocaleString()} pt</span></td>
+      <td>${p.stock}</td>
+      <td>
+        <button class="btn-sm" onclick="openProductModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">編集</button>
+        <button class="btn-sm btn-danger" onclick="deleteProduct('${esc(p.id)}', '${esc(p.name)}')">削除</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ─── 商品モーダル ─────────────────────────────────────────────
+function openProductModal(product) {
+  document.getElementById('productModal').classList.add('open');
+  if (product) {
+    document.getElementById('productModalTitle').textContent = '商品を編集';
+    document.getElementById('editProductId').value = product.id || '';
+    document.getElementById('fieldProductName').value = product.name || '';
+    document.getElementById('fieldPointsRequired').value = product.pointsRequired || '';
+    document.getElementById('fieldStock').value = (product.stock !== undefined && product.stock !== '') ? product.stock : '';
+    document.getElementById('fieldImageUrl').value = product.imageUrl || '';
+    document.getElementById('fieldDescription').value = product.description || '';
+  } else {
+    document.getElementById('productModalTitle').textContent = '商品を追加';
+    document.getElementById('editProductId').value = '';
+    document.getElementById('fieldProductName').value = '';
+    document.getElementById('fieldPointsRequired').value = '';
+    document.getElementById('fieldStock').value = '';
+    document.getElementById('fieldImageUrl').value = '';
+    document.getElementById('fieldDescription').value = '';
+  }
+}
+
+function closeProductModal() {
+  document.getElementById('productModal').classList.remove('open');
+}
+
+async function saveProduct() {
+  const productId     = document.getElementById('editProductId').value;
+  const name          = document.getElementById('fieldProductName').value.trim();
+  const pointsRequired = Number(document.getElementById('fieldPointsRequired').value);
+  const stockVal      = document.getElementById('fieldStock').value.trim();
+  const imageUrl      = document.getElementById('fieldImageUrl').value.trim();
+  const description   = document.getElementById('fieldDescription').value.trim();
+
+  if (!name) { alert('商品名を入力してください'); return; }
+  if (!pointsRequired || pointsRequired <= 0) { alert('必要ポイントを入力してください'); return; }
+
+  const params = { name, pointsRequired, imageUrl, description };
+  if (productId) params.productId = productId;
+  if (stockVal !== '') params.stock = Number(stockVal);
+
+  const res = await saveExchangeProduct(params);
+  if (res && res.success) {
+    closeProductModal();
+    await loadProducts();
+  } else {
+    alert('保存に失敗しました: ' + ((res && res.message) || '不明なエラー'));
+  }
+}
+
+async function deleteProduct(productId, name) {
+  if (!confirm(`「${name}」を削除しますか？\n（在庫が-1になり取り扱い終了となります）`)) return;
+  const res = await deleteExchangeProduct(productId);
+  if (res && res.success) {
+    await loadProducts();
+  } else {
+    alert('削除に失敗しました: ' + ((res && res.message) || '不明なエラー'));
+  }
+}
+
+// ─── 申請一覧 ─────────────────────────────────────────────────
+async function loadRequests() {
+  const res = await getExchangeRequests('');
+  allRequests = (res && res.requests) ? res.requests : [];
+  renderRequests();
+}
+
+function filterRequests(status) {
+  currentFilter = status;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === (status || 'すべて'));
+  });
+  renderRequests();
+}
+
+function renderRequests() {
+  const tbody = document.getElementById('requestsTbody');
+  const list = currentFilter
+    ? allRequests.filter(r => r.status === currentFilter)
+    : allRequests;
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:var(--text-light);">申請がありません</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(r => {
+    const statusBadge = r.status === '申請中'
+      ? `<span class="badge-status badge-pending">申請中</span>`
+      : r.status === '完了'
+        ? `<span class="badge-status badge-complete">完了</span>`
+        : `<span class="badge-status badge-rejected">却下</span>`;
+
+    const actions = r.status === '申請中'
+      ? `<button class="btn-sm btn-success" onclick="handleApprove('${esc(r.requestId)}')">完了にする</button>
+         <button class="btn-sm btn-reject" onclick="handleReject('${esc(r.requestId)}')">却下する</button>`
+      : '';
+
+    return `
+      <tr>
+        <td style="font-size:0.8rem;color:var(--text-light);">${r.date.substring(0, 10)}</td>
+        <td style="font-size:0.8rem;">${esc(r.requestId)}</td>
+        <td>${esc(r.name)}</td>
+        <td>${esc(r.productName)}</td>
+        <td style="font-weight:700;color:var(--gold-dark);">${r.points.toLocaleString()} pt</td>
+        <td>${statusBadge}</td>
+        <td style="white-space:nowrap;">${actions}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function handleApprove(requestId) {
+  if (!confirm('この申請を「完了」にしますか？\n顧客のポイントが減算され、在庫が1減ります。')) return;
+  const res = await approveExchange(requestId);
+  if (res && res.success) {
+    await loadRequests();
+  } else {
+    alert('処理に失敗しました: ' + ((res && res.message) || '不明なエラー'));
+  }
+}
+
+async function handleReject(requestId) {
+  if (!confirm('この申請を「却下」しますか？')) return;
+  const res = await rejectExchange(requestId);
+  if (res && res.success) {
+    await loadRequests();
+  } else {
+    alert('処理に失敗しました: ' + ((res && res.message) || '不明なエラー'));
+  }
+}
+
+// ─── ユーティリティ ───────────────────────────────────────────
+function esc(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// モーダル外クリックで閉じる
+document.getElementById('productModal').addEventListener('click', function(e) {
+  if (e.target === this) closeProductModal();
+});
+</script>
+</body>
+</html>

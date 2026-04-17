@@ -138,3 +138,55 @@ async function recordPayment(params) {
 async function getPaymentHistory(customerId) {
   return apiGet('getPaymentHistory', { customerId });
 }
+
+// ─── ポイント交換システム API ──────────────────────────────────
+
+/** 電話番号で顧客を検索（認証不要） */
+async function checkPhone(phone) {
+  return apiGet('checkPhone', { phone });
+}
+
+/** パスワード登録（認証不要） */
+async function registerPassword(customerId, hashedPassword) {
+  return apiGet('registerPassword', { customerId, hashedPassword });
+}
+
+/** 電話番号＋ハッシュパスワードでログイン（認証不要） */
+async function loginWithPassword(phone, hashedPassword) {
+  return apiGet('loginWithPassword', { phone, hashedPassword });
+}
+
+/** 交換対象商品一覧取得（認証不要） */
+async function getExchangeProducts() {
+  return apiGet('getExchangeProducts');
+}
+
+/** 交換申請（認証不要） */
+async function applyExchange(customerId, productId) {
+  return apiGet('applyExchange', { customerId, productId });
+}
+
+/** 交換申請一覧取得（管理者APIキー必要） */
+async function getExchangeRequests(status) {
+  return apiGet('getExchangeRequests', { status: status || '' });
+}
+
+/** 交換申請を完了にする（管理者APIキー必要） */
+async function approveExchange(requestId) {
+  return apiGet('approveExchange', { requestId });
+}
+
+/** 交換申請を却下する（管理者APIキー必要） */
+async function rejectExchange(requestId) {
+  return apiGet('rejectExchange', { requestId });
+}
+
+/** 交換商品の追加・更新（管理者APIキー必要） */
+async function saveExchangeProduct(params) {
+  return apiGet('saveExchangeProduct', params);
+}
+
+/** 交換商品を削除（管理者APIキー必要） */
+async function deleteExchangeProduct(productId) {
+  return apiGet('deleteExchangeProduct', { productId });
+}
