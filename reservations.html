@@ -601,7 +601,6 @@
   }
 
   updateMonthLabel();
-  loadReservations();
 
   // ── 顧客名サジェスト ─────────────────────────────────────────
   let customerCache = [];
@@ -612,7 +611,8 @@
       customerCache = data.customers.filter(c => c.name);
     }
   }
-  loadCustomerCache();
+
+  Promise.all([loadReservations(), loadCustomerCache()]);
 
   const nameInput   = document.getElementById('f_name');
   const suggestList = document.getElementById('suggestList');

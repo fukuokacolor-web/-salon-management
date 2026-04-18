@@ -344,8 +344,6 @@
     }
   }
 
-  loadDashboard();
-
   // ── 売上レポート ──────────────────────────────
   let dashBarChart = null;
 
@@ -454,7 +452,7 @@
     });
   }
 
-  loadSalesReport();
+  Promise.all([loadDashboard(), loadSalesReport()]);
 </script>
 </body>
 </html>
