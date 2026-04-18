@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#C9A96E">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>ポイント交換</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <style>
+    /* ─── ページ共通 ───────────────────────────────── */
+    body {
+      background: var(--bg);
+      min-height: 100vh;
+    }
+
+    /* ─── ヘッダー ─────────────────────────────────── */
+    .exchange-header {
+      background: var(--sidebar-bg);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .exchange-header-title {
+      font-family: 'Playfair Display', serif;
+      color: var(--gold);
+      font-size: 1.2rem;
+      letter-spacing: 0.08em;
+    }
+
+    /* ─── メインラッパー ────────────────────────────── */
+    .exchange-wrap {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+
+    /* ─── ビュー切り替え ────────────────────────────── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ─── ログイン・登録カード ──────────────────────── */
+    .auth-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border);
+      padding: 32px 28px;
+    }
+    .auth-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      color: var(--text);
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .auth-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-light);
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    /* ─── フォーム ─────────────────────────────────── */
+    .form-row {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--text-light);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      color: var(--text);
+      background: var(--white);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(201,169,110,0.15);
+    }
+
+    /* ─── ボタン ────────────────────────────────────── */
+    .btn-primary {
+      width: 100%;
+      padding: 13px;
+      background: var(--gold);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      margin-top: 4px;
+    }
+    .btn-primary:hover { background: var(--gold-dark); box-shadow: 0 4px 16px rgba(139,105,20,0.4); }
+    .btn-primary:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 11px;
+      background: transparent;
+      color: var(--gold-dark);
+      border: 1.5px solid var(--gold);
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 10px;
+      letter-spacing: 0.03em;
+    }
+    .btn-secondary:hover { background: var(--gold-bg); }
+
+    /* ─── メッセージ ────────────────────────────────── */
+    .msg-error {
+      background: #FDEAEA;
+      color: #B71C1C;
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 0.82rem;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .msg-error.show { display: block; }
+    .msg-success {
+      background: #EAF7EE;
+      color: #2E7D4F;
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 0.82rem;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .msg-success.show { display: block; }
+
+    /* ─── 商品一覧ビュー ────────────────────────────── */
+    .products-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .products-greeting {
+      font-size: 0.92rem;
+      color: var(--text);
+    }
+    .products-greeting strong {
+      color: var(--gold-dark);
+    }
+    .points-badge {
+      background: var(--gold-bg);
+      border: 1.5px solid var(--gold);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--gold-dark);
+      white-space: nowrap;
+    }
+    .btn-logout {
+      padding: 6px 14px;
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      border-radius: var(--radius);
+      color: rgba(255,255,255,0.6);
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-logout:hover { border-color: var(--gold); color: var(--gold); }
+
+    .products-section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--text-light);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ─── 商品グリッド ──────────────────────────────── */
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .product-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .product-image {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      background: var(--gold-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-light);
+      font-size: 0.8rem;
+    }
+    .product-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .product-image-placeholder {
+      width: 100%;
+      height: 160px;
+      background: var(--gold-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-light);
+      font-size: 2rem;
+    }
+    .product-body {
+      padding: 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .product-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .product-desc {
+      font-size: 0.78rem;
+      color: var(--text-light);
+      margin-bottom: 12px;
+      flex: 1;
+      line-height: 1.5;
+    }
+    .product-points {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--gold-dark);
+      margin-bottom: 12px;
+    }
+    .product-points span {
+      font-size: 1.1rem;
+    }
+    .btn-exchange {
+      width: 100%;
+      padding: 10px;
+      background: var(--gold);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    .btn-exchange:hover:not(:disabled) { background: var(--gold-dark); }
+    .btn-exchange:disabled {
+      background: #E0E0E0;
+      color: #999;
+      cursor: not-allowed;
+    }
+    .btn-exchange.out-of-stock {
+      background: #F5F5F5;
+      color: #AAAAAA;
+    }
+
+    /* ─── 空表示 ─────────────────────────────────────── */
+    .empty-products {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-light);
+      font-size: 0.88rem;
+    }
+
+    /* ─── 申請完了ビュー ────────────────────────────── */
+    .done-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border);
+      padding: 36px 28px;
+      text-align: center;
+    }
+    .done-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+    }
+    .done-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      color: var(--text);
+      margin-bottom: 24px;
+    }
+    .done-info {
+      background: var(--gold-bg);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .done-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      font-size: 0.88rem;
+    }
+    .done-info-row:not(:last-child) {
+      border-bottom: 1px solid var(--border);
+    }
+    .done-info-label {
+      color: var(--text-light);
+      font-size: 0.78rem;
+    }
+    .done-info-value {
+      font-weight: 700;
+      color: var(--gold-dark);
+    }
+    .done-note {
+      font-size: 0.78rem;
+      color: var(--text-light);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    /* ─── モーダル ──────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: var(--shadow-md);
+    }
+    .modal-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+    .modal-product-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .modal-detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 0.88rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-detail-row:last-of-type { border-bottom: none; }
+    .modal-detail-label { color: var(--text-light); }
+    .modal-detail-value { font-weight: 700; color: var(--gold-dark); }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 22px;
+    }
+    .btn-cancel-modal {
+      flex: 1;
+      padding: 11px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--white);
+      color: var(--text-light);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .btn-cancel-modal:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-apply-modal {
+      flex: 2;
+      padding: 11px;
+      background: var(--gold);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-apply-modal:hover { background: var(--gold-dark); }
+    .btn-apply-modal:disabled { background: #ccc; cursor: not-allowed; }
+
+    /* ─── ローダー ──────────────────────────────────── */
+    .spinner-inline {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── ヘッダーのレイアウト調整 ─────────────────── */
+    .exchange-header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    #headerLogout { display: none; }
+
+    /* ─── レスポンシブ ──────────────────────────────── */
+    @media (max-width: 400px) {
+      .products-grid {
+        grid-template-columns: 1fr;
+      }
+      .auth-card {
+        padding: 24px 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<header class="exchange-header">
+  <div class="exchange-header-inner">
+    <div class="exchange-header-title" id="headerSalonName">Salon</div>
+    <button class="btn-logout" id="headerLogout" onclick="logout()">ログアウト</button>
+  </div>
+</header>
+
+<!-- メインコンテンツ -->
+<div class="exchange-wrap">
+
+  <!-- ビュー①：ログイン -->
+  <div id="view-login" class="view active">
+    <div class="auth-card">
+      <div class="auth-title" id="loginSalonName">ポイント交換</div>
+      <div class="auth-subtitle">ポイント交換サービス</div>
+
+      <div class="msg-error" id="loginError"></div>
+      <div class="msg-success" id="loginSuccess"></div>
+
+      <div class="form-row">
+        <label class="form-label">電話番号（ハイフンなし）</label>
+        <input class="form-input" id="loginPhone" type="tel" placeholder="09012345678" inputmode="numeric">
+      </div>
+      <div class="form-row">
+        <label class="form-label">パスワード</label>
+        <input class="form-input" id="loginPassword" type="password" placeholder="パスワードを入力">
+      </div>
+
+      <button class="btn-primary" id="btnLogin" onclick="doLogin()">ログイン</button>
+      <button class="btn-secondary" onclick="showView('view-register')">初めての方はこちら →</button>
+    </div>
+  </div>
+
+  <!-- ビュー②：初回パスワード登録 -->
+  <div id="view-register" class="view">
+    <div class="auth-card">
+      <div class="auth-title">初回登録</div>
+      <div class="auth-subtitle">パスワードを設定してください</div>
+
+      <div class="msg-error" id="registerError"></div>
+      <div class="msg-success" id="registerSuccess"></div>
+
+      <div class="form-row">
+        <label class="form-label">電話番号（ハイフンなし）</label>
+        <input class="form-input" id="registerPhone" type="tel" placeholder="09012345678" inputmode="numeric">
+      </div>
+      <div class="form-row">
+        <label class="form-label">新しいパスワード（6文字以上）</label>
+        <input class="form-input" id="registerPassword" type="password" placeholder="6文字以上">
+      </div>
+      <div class="form-row">
+        <label class="form-label">パスワード（確認）</label>
+        <input class="form-input" id="registerPasswordConfirm" type="password" placeholder="もう一度入力">
+      </div>
+
+      <button class="btn-primary" id="btnRegister" onclick="doRegister()">登録する</button>
+      <button class="btn-secondary" onclick="showView('view-login')">← ログインに戻る</button>
+    </div>
+  </div>
+
+  <!-- ビュー③：商品一覧 -->
+  <div id="view-products" class="view">
+    <div class="products-header">
+      <div class="products-greeting">
+        こんにちは、<strong id="userName"></strong>様
+      </div>
+      <div class="points-badge">
+        現在のポイント: <span id="userPoints">0</span> pt
+      </div>
+    </div>
+
+    <div class="products-section-title">交換できる商品</div>
+
+    <div id="productsGrid" class="products-grid">
+      <div class="empty-products">読み込み中...</div>
+    </div>
+  </div>
+
+  <!-- ビュー④：申請完了 -->
+  <div id="view-done" class="view">
+    <div class="done-card">
+      <div class="done-icon">✅</div>
+      <div class="done-title">申請が完了しました</div>
+
+      <div class="done-info">
+        <div class="done-info-row">
+          <span class="done-info-label">申請番号</span>
+          <span class="done-info-value" id="doneRequestId">-</span>
+        </div>
+        <div class="done-info-row">
+          <span class="done-info-label">商品名</span>
+          <span class="done-info-value" id="doneProductName">-</span>
+        </div>
+        <div class="done-info-row">
+          <span class="done-info-label">消費ポイント</span>
+          <span class="done-info-value" id="donePoints">-</span>
+        </div>
+      </div>
+
+      <div class="done-note">
+        ※スタッフが確認後、商品をお渡しします
+      </div>
+
+      <button class="btn-primary" onclick="backToProducts()">商品一覧に戻る</button>
+    </div>
+  </div>
+
+</div><!-- /exchange-wrap -->
+
+<!-- 確認モーダル -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box">
+    <div class="modal-title">交換の確認</div>
+    <div class="modal-product-name" id="modalProductName">-</div>
+    <div class="modal-detail-row">
+      <span class="modal-detail-label">必要ポイント</span>
+      <span class="modal-detail-value" id="modalPoints">-</span>
+    </div>
+    <div class="modal-detail-row">
+      <span class="modal-detail-label">交換後の残高</span>
+      <span class="modal-detail-value" id="modalRemaining">-</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel-modal" onclick="closeModal()">キャンセル</button>
+      <button class="btn-apply-modal" id="btnApply" onclick="doApply()">申請する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── 定数・状態 ───────────────────────────────────────────────
+const STORAGE_KEY_ID     = 'exchange_customerId';
+const STORAGE_KEY_NAME   = 'exchange_customerName';
+const STORAGE_KEY_POINTS = 'exchange_points';
+
+let currentProductId      = null;
+let currentPointsRequired = 0;
+
+// ─── 初期化 ───────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // サロン名設定
+  if (typeof SALON_NAME !== 'undefined') {
+    document.getElementById('headerSalonName').textContent = SALON_NAME;
+    document.getElementById('loginSalonName').textContent = SALON_NAME;
+  }
+
+  // Enterキーでログイン・登録
+  document.getElementById('loginPassword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+  document.getElementById('registerPasswordConfirm').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doRegister();
+  });
+
+  // ログイン済みチェック
+  const savedId = localStorage.getItem(STORAGE_KEY_ID);
+  if (savedId) {
+    restoreSession();
+  }
+});
+
+// ─── ビュー切り替え ───────────────────────────────────────────
+function showView(viewId) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(viewId).classList.add('active');
+
+  // ログアウトボタン表示制御
+  document.getElementById('headerLogout').style.display =
+    (viewId === 'view-products' || viewId === 'view-done') ? 'block' : 'none';
+}
+
+// ─── 公開API呼び出し（認証キー不要） ─────────────────────────
+async function publicApiGet(action, params = {}) {
+  const query = new URLSearchParams({ action, ...params });
+  try {
+    const res = await fetch(`${GAS_URL}?${query}`, { redirect: 'follow', mode: 'cors' });
+    const text = await res.text();
+    try { return JSON.parse(text); } catch(e) { return null; }
+  } catch(err) {
+    console.error(`publicApiGet error [${action}]:`, err);
+    return null;
+  }
+}
+
+// ─── SHA-256ハッシュ化 ────────────────────────────────────────
+async function hashPasswordFront(customerId, password) {
+  const text = customerId + ':' + password;
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ─── ログイン ─────────────────────────────────────────────────
+async function doLogin() {
+  const phone    = document.getElementById('loginPhone').value.trim().replace(/-/g, '');
+  const password = document.getElementById('loginPassword').value;
+  const errEl    = document.getElementById('loginError');
+  const sucEl    = document.getElementById('loginSuccess');
+  const btn      = document.getElementById('btnLogin');
+
+  errEl.classList.remove('show');
+  sucEl.classList.remove('show');
+
+  if (!phone) { showError(errEl, '電話番号を入力してください'); return; }
+  if (!password) { showError(errEl, 'パスワードを入力してください'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-inline"></span>確認中...';
+
+  // ① 電話番号でcustomerIdを取得
+  const checkRes = await publicApiGet('checkPhone', { phone });
+  if (!checkRes || !checkRes.found) {
+    showError(errEl, 'この電話番号はサロンに登録されていません');
+    resetBtn(btn, 'ログイン');
+    return;
+  }
+  if (!checkRes.hasPassword) {
+    showError(errEl, 'パスワードが未設定です。「初めての方はこちら」から登録してください');
+    resetBtn(btn, 'ログイン');
+    return;
+  }
+
+  // ② hash(customerId + ':' + password)
+  const hashedPassword = await hashPasswordFront(checkRes.customerId, password);
+
+  // ③ ログイン
+  const loginRes = await publicApiGet('loginWithPassword', { phone, hashedPassword });
+  if (!loginRes || !loginRes.success) {
+    showError(errEl, (loginRes && loginRes.message) || '電話番号またはパスワードが違います');
+    resetBtn(btn, 'ログイン');
+    return;
+  }
+
+  // セッション保存
+  localStorage.setItem(STORAGE_KEY_ID,     loginRes.customerId);
+  localStorage.setItem(STORAGE_KEY_NAME,   loginRes.name);
+  localStorage.setItem(STORAGE_KEY_POINTS, String(loginRes.points));
+
+  resetBtn(btn, 'ログイン');
+  await showProducts(loginRes.name, loginRes.points);
+}
+
+// ─── 初回パスワード登録 ───────────────────────────────────────
+async function doRegister() {
+  const phone    = document.getElementById('registerPhone').value.trim().replace(/-/g, '');
+  const password = document.getElementById('registerPassword').value;
+  const confirm  = document.getElementById('registerPasswordConfirm').value;
+  const errEl    = document.getElementById('registerError');
+  const sucEl    = document.getElementById('registerSuccess');
+  const btn      = document.getElementById('btnRegister');
+
+  errEl.classList.remove('show');
+  sucEl.classList.remove('show');
+
+  if (!phone)    { showError(errEl, '電話番号を入力してください'); return; }
+  if (!password) { showError(errEl, 'パスワードを入力してください'); return; }
+  if (password.length < 6) { showError(errEl, 'パスワードは6文字以上で入力してください'); return; }
+  if (password !== confirm) { showError(errEl, 'パスワードが一致しません'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-inline"></span>登録中...';
+
+  // 電話番号チェック
+  const checkRes = await publicApiGet('checkPhone', { phone });
+  if (!checkRes || !checkRes.found) {
+    showError(errEl, 'この電話番号はサロンに登録されていません');
+    resetBtn(btn, '登録する');
+    return;
+  }
+  if (checkRes.hasPassword) {
+    showError(errEl, 'すでに登録済みです。ログインしてください');
+    resetBtn(btn, '登録する');
+    return;
+  }
+
+  // ハッシュ化してパスワード登録
+  const hashedPassword = await hashPasswordFront(checkRes.customerId, password);
+  const regRes = await publicApiGet('registerPassword', {
+    customerId: checkRes.customerId,
+    hashedPassword,
+  });
+
+  if (!regRes || !regRes.success) {
+    showError(errEl, (regRes && regRes.message) || '登録に失敗しました');
+    resetBtn(btn, '登録する');
+    return;
+  }
+
+  resetBtn(btn, '登録する');
+
+  // ログイン画面へ戻り成功メッセージ表示
+  showView('view-login');
+  const loginSuccessEl = document.getElementById('loginSuccess');
+  loginSuccessEl.textContent = '登録完了しました。ログインしてください';
+  loginSuccessEl.classList.add('show');
+}
+
+// ─── セッション復元 ───────────────────────────────────────────
+async function restoreSession() {
+  const savedId     = localStorage.getItem(STORAGE_KEY_ID);
+  const savedName   = localStorage.getItem(STORAGE_KEY_NAME);
+  const savedPoints = Number(localStorage.getItem(STORAGE_KEY_POINTS)) || 0;
+  if (savedId && savedName) {
+    await showProducts(savedName, savedPoints);
+  }
+}
+
+// ─── 商品一覧表示 ─────────────────────────────────────────────
+async function showProducts(name, points) {
+  document.getElementById('userName').textContent = name;
+  document.getElementById('userPoints').textContent = points.toLocaleString();
+  showView('view-products');
+
+  const res = await publicApiGet('getExchangeProducts');
+  const grid = document.getElementById('productsGrid');
+
+  if (!res || !res.products || res.products.length === 0) {
+    grid.innerHTML = '<div class="empty-products">現在交換できる商品がありません</div>';
+    return;
+  }
+
+  grid.innerHTML = res.products.map(p => buildProductCard(p, points)).join('');
+}
+
+function buildProductCard(p, userPoints) {
+  const noStock    = p.stock === 0;
+  const noPoints   = userPoints < p.pointsRequired;
+  const disabled   = noStock || noPoints;
+
+  let btnClass = 'btn-exchange';
+  let btnText  = '交換する';
+  let btnDisabled = '';
+  if (noStock) {
+    btnClass += ' out-of-stock';
+    btnText = '在庫切れ';
+    btnDisabled = 'disabled';
+  } else if (noPoints) {
+    btnText = 'ポイント不足';
+    btnDisabled = 'disabled';
+  }
+
+  const imageHtml = p.imageUrl
+    ? `<div class="product-image"><img src="${esc(p.imageUrl)}" alt="${esc(p.name)}" onerror="this.parentElement.innerHTML='<div class=\\'product-image-placeholder\\'>🎁</div>'"></div>`
+    : `<div class="product-image-placeholder">🎁</div>`;
+
+  const onclick = disabled ? '' : `onclick="openConfirmModal('${esc(p.id)}', '${esc(p.name)}', ${p.pointsRequired})"`;
+
+  return `
+    <div class="product-card">
+      ${imageHtml}
+      <div class="product-body">
+        <div class="product-name">${esc(p.name)}</div>
+        ${p.description ? `<div class="product-desc">${esc(p.description)}</div>` : '<div class="product-desc"></div>'}
+        <div class="product-points">必要: <span>${p.pointsRequired.toLocaleString()}</span> pt</div>
+        <button class="${btnClass}" ${btnDisabled} ${onclick}>${btnText}</button>
+      </div>
+    </div>
+  `;
+}
+
+// ─── 確認モーダル ─────────────────────────────────────────────
+function openConfirmModal(productId, productName, pointsRequired) {
+  const userPoints = Number(localStorage.getItem(STORAGE_KEY_POINTS)) || 0;
+  const remaining  = userPoints - pointsRequired;
+
+  currentProductId      = productId;
+  currentPointsRequired = pointsRequired;
+
+  document.getElementById('modalProductName').textContent = productName;
+  document.getElementById('modalPoints').textContent      = pointsRequired.toLocaleString() + ' pt';
+  document.getElementById('modalRemaining').textContent   = remaining.toLocaleString() + ' pt';
+  document.getElementById('btnApply').disabled = false;
+  document.getElementById('confirmModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('confirmModal').classList.remove('open');
+  currentProductId      = null;
+  currentPointsRequired = 0;
+}
+
+// モーダル外クリックで閉じる
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ─── 交換申請 ─────────────────────────────────────────────────
+async function doApply() {
+  const customerId = localStorage.getItem(STORAGE_KEY_ID);
+  if (!customerId || !currentProductId) return;
+
+  const btn = document.getElementById('btnApply');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-inline"></span>申請中...';
+
+  const res = await publicApiGet('applyExchange', {
+    customerId,
+    productId: currentProductId,
+  });
+
+  if (!res || !res.success) {
+    btn.disabled = false;
+    btn.textContent = '申請する';
+    alert((res && res.message) || '申請に失敗しました。もう一度お試しください。');
+    closeModal();
+    return;
+  }
+
+  // ローカルのポイントを更新
+  const newPoints = Math.max(0, (Number(localStorage.getItem(STORAGE_KEY_POINTS)) || 0) - currentPointsRequired);
+  localStorage.setItem(STORAGE_KEY_POINTS, String(newPoints));
+
+  // 完了画面へ
+  const productName = document.getElementById('modalProductName').textContent;
+  document.getElementById('doneRequestId').textContent  = res.requestId || '-';
+  document.getElementById('doneProductName').textContent = productName;
+  document.getElementById('donePoints').textContent     = currentPointsRequired.toLocaleString() + ' pt';
+
+  closeModal();
+  showView('view-done');
+}
+
+// ─── 商品一覧に戻る ───────────────────────────────────────────
+async function backToProducts() {
+  const savedId     = localStorage.getItem(STORAGE_KEY_ID);
+  const savedName   = localStorage.getItem(STORAGE_KEY_NAME);
+  const savedPoints = Number(localStorage.getItem(STORAGE_KEY_POINTS)) || 0;
+  if (savedId && savedName) {
+    await showProducts(savedName, savedPoints);
+  }
+}
+
+// ─── ログアウト ───────────────────────────────────────────────
+function logout() {
+  localStorage.removeItem(STORAGE_KEY_ID);
+  localStorage.removeItem(STORAGE_KEY_NAME);
+  localStorage.removeItem(STORAGE_KEY_POINTS);
+  currentProductId      = null;
+  currentPointsRequired = 0;
+  // フォームをクリア
+  document.getElementById('loginPhone').value    = '';
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginError').classList.remove('show');
+  document.getElementById('loginSuccess').classList.remove('show');
+  showView('view-login');
+}
+
+// ─── ユーティリティ ───────────────────────────────────────────
+function showError(el, msg) {
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function resetBtn(btn, label) {
+  btn.disabled = false;
+  btn.textContent = label;
+}
+
+function esc(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+</script>
+</body>
+</html>
