@@ -73,9 +73,9 @@
       display: block;
       font-size: 0.75rem;
       font-weight: 700;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.02em;
       color: var(--text-light);
-      text-transform: uppercase;
+      text-transform: none;
       margin-bottom: 6px;
     }
     .form-input {
@@ -479,6 +479,14 @@
       <div class="auth-title" id="loginSalonName">ポイント交換</div>
       <div class="auth-subtitle">ポイント交換サービス</div>
 
+      <div style="text-align:center; margin-bottom:24px;">
+        <div style="font-size:2rem; margin-bottom:8px;">🎁</div>
+        <p style="color:var(--text-light); font-size:0.9rem; line-height:1.7;">
+          来店で貯まったポイントを<br>お好きな商品と交換できます。<br>
+          電話番号とパスワードでログインしてください。
+        </p>
+      </div>
+
       <div class="msg-error" id="loginError"></div>
       <div class="msg-success" id="loginSuccess"></div>
 
@@ -501,6 +509,10 @@
     <div class="auth-card">
       <div class="auth-title">初回登録</div>
       <div class="auth-subtitle">パスワードを設定してください</div>
+
+      <p style="color:var(--text-light); font-size:0.88rem; margin-bottom:20px; line-height:1.6;">
+        サロンにご登録済みの電話番号でパスワードを設定してください。
+      </p>
 
       <div class="msg-error" id="registerError"></div>
       <div class="msg-success" id="registerSuccess"></div>
@@ -802,7 +814,8 @@ function buildProductCard(p, userPoints) {
     btnText = '在庫切れ';
     btnDisabled = 'disabled';
   } else if (noPoints) {
-    btnText = 'ポイント不足';
+    const currentPoints = parseInt(localStorage.getItem(STORAGE_KEY_POINTS)) || 0;
+    btnText = `あと ${p.pointsRequired - currentPoints} pt 必要`;
     btnDisabled = 'disabled';
   }
 
