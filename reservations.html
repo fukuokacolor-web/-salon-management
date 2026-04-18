@@ -171,6 +171,50 @@
       transition: opacity 0.2s;
     }
     .btn-add-res:hover { opacity: 0.85; }
+
+    /* ── 顧客名サジェスト ── */
+    .suggest-wrap {
+      position: relative;
+    }
+    .suggest-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      z-index: 2000;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+    .suggest-list.open { display: block; }
+    .suggest-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .suggest-item:last-child { border-bottom: none; }
+    .suggest-item:hover { background: var(--gold-bg); }
+    .suggest-item .suggest-name { font-weight: 600; color: var(--text); }
+    .suggest-item .suggest-phone { font-size: 0.78rem; color: var(--text-light); margin-left: 8px; }
+
+    /* ── 編集ボタン ── */
+    .btn-edit {
+      background: transparent;
+      border: 1px solid #90CAF9;
+      color: #1565C0;
+      font-size: 0.75rem;
+      padding: 5px 10px;
+      border-radius: 4px;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+    .btn-edit:hover { background: #E3F2FD; }
   </style>
 </head>
 <body>
@@ -283,6 +327,32 @@
   </div>
 </div>
 
+<!-- 予約編集モーダル -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <div class="modal-title">✏️ 予約を編集</div>
+    <input type="hidden" id="e_row">
+    <div class="modal-row">
+      <div class="modal-field">
+        <label>日付<span class="req">*</span></label>
+        <input type="date" id="e_date">
+      </div>
+      <div class="modal-field">
+        <label>時間<span class="req">*</span></label>
+        <input type="time" id="e_time">
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>メニュー</label>
+      <input type="text" id="e_menu" placeholder="全身脱毛 など">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeEditModal()">キャンセル</button>
+      <button class="btn-add-res" id="editSubmitBtn" onclick="submitEditReservation()">変更を保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- 新規予約モーダル -->
 <div class="modal-overlay" id="addModal">
   <div class="modal-box">
@@ -297,9 +367,10 @@
         <input type="time" id="f_time" value="10:00">
       </div>
     </div>
-    <div class="modal-field">
+    <div class="modal-field suggest-wrap">
       <label>お客様名<span class="req">*</span></label>
       <input type="text" id="f_name" placeholder="山田 花子" autocomplete="off">
+      <div class="suggest-list" id="suggestList"></div>
     </div>
     <div class="modal-field">
       <label>電話番号</label>
@@ -474,7 +545,8 @@
                     : isCancel
                       ? '—'
                       : `<button class="btn btn-complete" onclick="doComplete(${r.row}, this)">完了</button>
-                         <button class="btn btn-danger" onclick="doCancel(${r.row}, this)">キャンセル</button>`}
+                         <button class="btn btn-danger" onclick="doCancel(${r.row}, this)">キャンセル</button>
+                         <button class="btn-edit" onclick="openEditModal(${r.row}, '${r.date}', '${r.time}', ${JSON.stringify(r.menu || '')})">✏️</button>`}
                 </td>
               </tr>`;
             }).join('')}
@@ -530,6 +602,102 @@
 
   updateMonthLabel();
   loadReservations();
+
+  // ── 顧客名サジェスト ─────────────────────────────────────────
+  let customerCache = [];
+
+  async function loadCustomerCache() {
+    const data = await getCustomers();
+    if (data && data.customers) {
+      customerCache = data.customers.filter(c => c.name);
+    }
+  }
+  loadCustomerCache();
+
+  const nameInput   = document.getElementById('f_name');
+  const suggestList = document.getElementById('suggestList');
+
+  nameInput.addEventListener('input', function() {
+    const q = this.value.trim();
+    if (!q || customerCache.length === 0) {
+      suggestList.classList.remove('open');
+      return;
+    }
+    const matched = customerCache.filter(c =>
+      c.name.includes(q)
+    ).slice(0, 8);
+
+    if (matched.length === 0) {
+      suggestList.classList.remove('open');
+      return;
+    }
+
+    suggestList.innerHTML = matched.map(c => `
+      <div class="suggest-item" onclick="selectSuggest(${JSON.stringify(c.name)}, ${JSON.stringify(c.phone || '')})">
+        <span class="suggest-name">${c.name}</span>
+        <span class="suggest-phone">${c.phone || ''}</span>
+      </div>
+    `).join('');
+    suggestList.classList.add('open');
+  });
+
+  nameInput.addEventListener('blur', function() {
+    setTimeout(() => suggestList.classList.remove('open'), 150);
+  });
+
+  function selectSuggest(name, phone) {
+    document.getElementById('f_name').value  = name;
+    document.getElementById('f_phone').value = phone;
+    suggestList.classList.remove('open');
+  }
+
+  // ── 予約編集モーダル ──────────────────────────────────────────
+  function openEditModal(row, date, time, menu) {
+    document.getElementById('e_row').value  = row;
+    // date: "yyyy/MM/dd" → "yyyy-MM-dd" に変換
+    document.getElementById('e_date').value = date.replace(/\//g, '-');
+    document.getElementById('e_time').value = time;
+    document.getElementById('e_menu').value = menu || '';
+    document.getElementById('editSubmitBtn').disabled = false;
+    document.getElementById('editSubmitBtn').textContent = '変更を保存';
+    document.getElementById('editModal').classList.add('open');
+  }
+
+  function closeEditModal() {
+    document.getElementById('editModal').classList.remove('open');
+  }
+
+  document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+  });
+
+  async function submitEditReservation() {
+    const row  = document.getElementById('e_row').value;
+    const date = document.getElementById('e_date').value;
+    const time = document.getElementById('e_time').value;
+    const menu = document.getElementById('e_menu').value.trim();
+
+    if (!date || !time) {
+      alert('日付と時間は必須です');
+      return;
+    }
+
+    const btn = document.getElementById('editSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+
+    const dateFormatted = date.replace(/-/g, '/') + ' ' + time;
+    const res = await updateReservation(Number(row), dateFormatted, menu);
+
+    if (res && res.success) {
+      closeEditModal();
+      loadReservations();
+    } else {
+      alert('更新に失敗しました: ' + (res && res.message ? res.message : '不明なエラー'));
+      btn.disabled = false;
+      btn.textContent = '変更を保存';
+    }
+  }
 
   // ── 新規予約モーダル ──────────────────────────────
   function openAddModal() {

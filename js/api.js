@@ -190,3 +190,8 @@ async function saveExchangeProduct(params) {
 async function deleteExchangeProduct(productId) {
   return apiGet('deleteExchangeProduct', { productId });
 }
+
+/** 予約を編集（日時・メニュー変更） */
+async function updateReservation(row, date, menu) {
+  return apiGet('updateReservation', { row, date, menu });
+}
