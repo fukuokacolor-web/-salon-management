@@ -82,8 +82,8 @@ async function saveMenuPoints(menuPoints) {
 }
 
 /** プラン設定（都度払い / 回数コース） */
-async function setPlan(customerId, plan, courseTotal) {
-  return apiGet('setPlan', { customerId, plan, courseTotal: String(courseTotal || '') });
+async function setPlan(customerId, plan, courseTotal, courseName) {
+  return apiGet('setPlan', { customerId, plan, courseTotal: String(courseTotal || ''), courseName: courseName || '' });
 }
 
 /** メニュー単価設定取得 */
@@ -194,4 +194,27 @@ async function deleteExchangeProduct(productId) {
 /** 予約を編集（日時・メニュー変更） */
 async function updateReservation(row, date, menu) {
   return apiGet('updateReservation', { row, date, menu });
+}
+
+/** コース種別一覧・料金取得 */
+async function getCourseTypes() {
+  return apiGet('getCourseTypes');
+}
+
+/** コース種別・料金保存 */
+async function saveCourseTypes(types, coursePrices) {
+  return apiGet('saveCourseTypes', {
+    types: JSON.stringify(types),
+    coursePrices: JSON.stringify(coursePrices),
+  });
+}
+
+/** コース残回数を相対値で調整（+1/-1等） */
+async function adjustCourseRemaining(customerId, delta) {
+  return apiGet('adjustCourseRemaining', { customerId, delta: String(delta) });
+}
+
+/** コース残回数を絶対値でセット */
+async function setCourseRemaining(customerId, value) {
+  return apiGet('setCourseRemaining', { customerId, value: String(value) });
 }

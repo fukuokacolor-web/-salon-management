@@ -84,14 +84,22 @@
 
     <div class="page-body">
 
+      <!-- フィルタータブ -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;" id="filterTabs">
+        <button class="filter-tab active" onclick="setFilter('all', this)">全員</button>
+        <button class="filter-tab" onclick="setFilter('course', this)">回数コース</button>
+        <button class="filter-tab" onclick="setFilter('single', this)">都度払い</button>
+        <button class="filter-tab" onclick="setFilter('alert', this)">⚠ 残少</button>
+      </div>
+
       <!-- 検索 -->
       <div style="display:flex; gap:10px; align-items:center; margin-bottom:20px;">
         <div class="search-box" style="margin-bottom:0;">
           <span class="search-icon">🔍</span>
           <input type="text" id="searchInput" placeholder="名前・電話番号で検索"
-            onkeydown="if(event.key==='Enter') filterCustomers()">
+            onkeydown="if(event.key==='Enter') applyFilters()">
         </div>
-        <button class="btn btn-gold" onclick="filterCustomers()">検索</button>
+        <button class="btn btn-gold" onclick="applyFilters()">検索</button>
         <button class="btn btn-outline" onclick="resetSearch()">リセット</button>
       </div>
 
@@ -107,23 +115,77 @@
   </div>
 </div>
 
+<style>
+  .filter-tab {
+    padding: 7px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    background: #fff;
+    color: var(--text-light);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .filter-tab.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+  .filter-tab:hover:not(.active) {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+</style>
+
 <script>
   checkAuth();
   document.getElementById('salonNameSidebar').textContent = SALON_NAME;
   document.title = '顧客管理 - ' + SALON_NAME;
 
-  let allCustomers = [];
+  let allCustomers  = [];
+  let currentFilter = 'all';
+
+  function setFilter(filter, el) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    applyFilters();
+  }
+
+  function applyFilters() {
+    let list = allCustomers;
+    const q = document.getElementById('searchInput').value.trim().toLowerCase();
+    if (q) list = list.filter(c =>
+      (c.name  || '').toLowerCase().includes(q) ||
+      (c.phone || '').includes(q)
+    );
+    if (currentFilter === 'course') list = list.filter(c => c.plan === '回数コース');
+    else if (currentFilter === 'single') list = list.filter(c => c.plan !== '回数コース');
+    else if (currentFilter === 'alert')  list = list.filter(c => c.plan === '回数コース' && c.courseRemaining <= 4);
+    if (currentFilter === 'alert') list = [...list].sort((a, b) => a.courseRemaining - b.courseRemaining);
+    renderTable(list);
+  }
 
   function planBadge(c) {
     if (c.plan === '回数コース') {
-      const pct = c.courseTotal > 0 ? Math.round((c.courseRemaining / c.courseTotal) * 100) : 0;
+      const courseName = c.courseName || '';
       const color = c.courseRemaining <= 2 ? '#B71C1C' : c.courseRemaining <= 4 ? '#E65100' : '#2E7D4F';
       return `<span style="display:inline-flex;align-items:center;gap:5px;background:#f0f8ff;border:1px solid #b3d9f7;color:#1565C0;border-radius:20px;padding:2px 10px;font-size:0.82rem;font-weight:600;">
-        回数コース
+        🎟 ${courseName ? courseName + ' ' : ''}${c.courseTotal}回コース
         <span style="background:${color};color:#fff;border-radius:10px;padding:1px 7px;font-size:0.78rem;">残${c.courseRemaining}回</span>
       </span>`;
     }
     return `<span style="background:#f5f5f5;border:1px solid #ddd;color:#888;border-radius:20px;padding:2px 10px;font-size:0.82rem;">都度払い</span>`;
+  }
+
+  function remainingCell(c) {
+    if (c.plan !== '回数コース') return '<span style="color:#ccc;">—</span>';
+    const r  = c.courseRemaining;
+    const t  = c.courseTotal;
+    const color = r <= 2 ? '#B71C1C' : r <= 4 ? '#E65100' : '#2E7D4F';
+    const bg    = r <= 2 ? '#FDECEA' : r <= 4 ? '#FFF3E0' : '#E8F7F1';
+    return `<span style="background:${bg};color:${color};border-radius:20px;padding:3px 12px;font-weight:700;font-size:0.9rem;">${r}<span style="color:#aaa;font-size:0.78rem;font-weight:400;">/${t}</span></span>`;
   }
 
   function formatDate(val) {
@@ -150,6 +212,7 @@
               <th>お名前</th>
               <th>電話番号</th>
               <th>プラン</th>
+              <th>残回数</th>
               <th>保有ポイント</th>
               <th>最終来店日</th>
               <th>登録日</th>
@@ -162,6 +225,7 @@
                 <td><a href="customer-detail.html?id=${encodeURIComponent(c.customerId)}" style="color:var(--gold-dark);text-decoration:underline;font-weight:600;">${c.name || '（未登録）'}</a></td>
                 <td>${c.phone || '—'}</td>
                 <td>${planBadge(c)}</td>
+                <td>${remainingCell(c)}</td>
                 <td><span class="badge badge-gold">${c.points ?? 0} pt</span></td>
                 <td>${formatDate(c.lastVisit)}</td>
                 <td>${formatDate(c.createdAt)}</td>
@@ -171,19 +235,11 @@
       </div>`;
   }
 
-  function filterCustomers() {
-    const q = document.getElementById('searchInput').value.trim().toLowerCase();
-    if (!q) { renderTable(allCustomers); return; }
-    const filtered = allCustomers.filter(c =>
-      (c.name  || '').toLowerCase().includes(q) ||
-      (c.phone || '').includes(q)
-    );
-    renderTable(filtered);
-  }
+  function filterCustomers() { applyFilters(); }
 
   function resetSearch() {
     document.getElementById('searchInput').value = '';
-    renderTable(allCustomers);
+    applyFilters();
   }
 
   async function loadCustomers() {

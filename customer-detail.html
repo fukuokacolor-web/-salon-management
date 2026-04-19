@@ -187,6 +187,27 @@
       <!-- プランカード -->
       <div id="planCard"></div>
 
+      <!-- 残回数調整UI -->
+      <div id="remainingAdjust" style="display:none;">
+        <div class="card">
+          <div class="card-title">🔢 残回数の手動調整</div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <button onclick="adjustRemaining(-1)" class="btn btn-outline" style="font-size:1.2rem;padding:6px 16px;">−</button>
+            <div style="text-align:center;min-width:80px;">
+              <div id="adjustDisplay" style="font-size:2rem;font-weight:700;color:var(--primary);">—</div>
+              <div style="font-size:0.8rem;color:var(--text-light);">現在の残回数</div>
+            </div>
+            <button onclick="adjustRemaining(+1)" class="btn btn-outline" style="font-size:1.2rem;padding:6px 16px;">＋</button>
+            <div style="margin-left:8px;display:flex;align-items:center;gap:8px;">
+              <input type="number" id="setRemainingInput" min="0" placeholder="直接入力"
+                style="width:100px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);">
+              <button onclick="setRemainingDirect()" class="btn btn-gold">セット</button>
+            </div>
+          </div>
+          <p style="font-size:0.8rem;color:var(--text-light);margin-top:8px;">※ コース途中解約・訂正・ミス修正に使用してください</p>
+        </div>
+      </div>
+
       <!-- 支払い記録 -->
       <div class="card">
         <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
@@ -227,8 +248,15 @@
         <input type="text" id="paymentContent" placeholder="例：カラー、トリートメントなど"
           style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;box-sizing:border-box;">
       </div>
+      <div id="paymentCourseTypeWrap" style="display:none;">
+        <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:6px;">コース種別</div>
+        <select id="paymentCourseType" onchange="onPaymentCourseChange()"
+          style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;">
+          <option value="">種別を選択</option>
+        </select>
+      </div>
       <div id="paymentCourseWrap" style="display:none;">
-        <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:6px;">コース</div>
+        <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:6px;">回数</div>
         <select id="paymentCourse" onchange="onPaymentCourseChange()"
           style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;">
           <option value="10">10回コース</option>
@@ -263,6 +291,11 @@
       <label><input type="radio" name="planType" value="回数コース" onchange="onPlanTypeChange()"> 回数コース</label>
     </div>
     <div id="courseSelectWrap" style="display:none;">
+      <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:6px;">コース種別</div>
+      <select class="select-course" id="courseTypeSelect">
+        <option value="">種別を選択</option>
+      </select>
+      <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:6px;margin-top:12px;">回数</div>
       <select class="select-course" id="courseTotal">
         <option value="10">10回コース</option>
         <option value="12">12回コース</option>
@@ -287,6 +320,17 @@
   const customerId = params.get('id') || '';
   let currentCustomer = null;
 
+  // ─── コース種別キャッシュ ─────────────────────────────────
+  let cachedCourseTypes    = [];
+  let cachedCoursePricesV2 = {};
+
+  async function ensureCourseTypesLoaded() {
+    if (cachedCourseTypes.length > 0) return;
+    const data = await getCourseTypes();
+    cachedCourseTypes    = data?.courseTypes  || [];
+    cachedCoursePricesV2 = data?.coursePrices || {};
+  }
+
   // ─── プランカード描画 ─────────────────────────────────────
   function renderPlanCard(c) {
     const plan      = c.plan || '都度払い';
@@ -296,10 +340,11 @@
     const pct       = total > 0 ? Math.round((remaining / total) * 100) : 0;
     const barColor  = remaining <= 2 ? '#B71C1C' : remaining <= 4 ? '#E65100' : 'var(--gold-dark)';
     const remColor  = remaining <= 2 ? '#B71C1C' : remaining <= 4 ? '#E65100' : '#1565C0';
+    const courseName = c.courseName || '';
 
     const courseHtml = isCourse ? `
       <div class="course-bar-wrap">
-        <div class="course-nums">${total}回コース</div>
+        <div class="course-nums">${courseName ? courseName + ' ' : ''}${total}回コース</div>
         <div class="course-bar-track">
           <div class="course-bar-fill" style="width:${pct}%;background:${barColor};"></div>
         </div>
@@ -313,23 +358,69 @@
 
     document.getElementById('planCard').innerHTML = `
       <div class="plan-card">
-        <div style="min-width:120px;">
+        <div style="min-width:140px;">
           <div class="plan-label">現在のプラン</div>
-          <div class="plan-type">${isCourse ? '🎟 回数コース' : '💳 都度払い'}</div>
+          <div class="plan-type">${isCourse ? '🎟 ' + (courseName || '回数コース') + '（' + total + '回）' : '💳 都度払い'}</div>
         </div>
         ${courseHtml}
         <div style="margin-left:auto;">
           <button class="btn btn-outline" onclick="openPlanModal()">プランを変更</button>
         </div>
       </div>`;
+
+    // 残回数調整UIの表示制御
+    const adjustEl = document.getElementById('remainingAdjust');
+    if (isCourse) {
+      adjustEl.style.display = 'block';
+      updateAdjustDisplay();
+    } else {
+      adjustEl.style.display = 'none';
+    }
+  }
+
+  function updateAdjustDisplay() {
+    const r = currentCustomer?.courseRemaining ?? 0;
+    const el = document.getElementById('adjustDisplay');
+    el.textContent = r;
+    el.style.color = r <= 2 ? '#B71C1C' : r <= 4 ? '#E65100' : 'var(--primary)';
+  }
+
+  async function adjustRemaining(delta) {
+    const res = await adjustCourseRemaining(customerId, delta);
+    if (res?.success) {
+      currentCustomer.courseRemaining = res.courseRemaining;
+      renderPlanCard(currentCustomer);
+    } else {
+      alert('調整に失敗しました: ' + (res?.message || ''));
+    }
+  }
+
+  async function setRemainingDirect() {
+    const val = parseInt(document.getElementById('setRemainingInput').value);
+    if (isNaN(val) || val < 0) { alert('0以上の数値を入力してください'); return; }
+    const res = await setCourseRemaining(customerId, val);
+    if (res?.success) {
+      currentCustomer.courseRemaining = res.courseRemaining;
+      renderPlanCard(currentCustomer);
+      document.getElementById('setRemainingInput').value = '';
+    } else {
+      alert('セットに失敗しました: ' + (res?.message || ''));
+    }
   }
 
   // ─── モーダル制御 ────────────────────────────────────────
-  function openPlanModal() {
+  async function openPlanModal() {
+    await ensureCourseTypesLoaded();
     const plan = currentCustomer?.plan || '都度払い';
     document.querySelectorAll('input[name="planType"]').forEach(r => {
       r.checked = (r.value === plan);
     });
+    // コース種別セレクトを動的生成
+    const sel = document.getElementById('courseTypeSelect');
+    sel.innerHTML = '<option value="">種別を選択</option>' +
+      cachedCourseTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+    // 現在の値をセット
+    sel.value = currentCustomer?.courseName || '';
     document.getElementById('courseTotal').value =
       currentCustomer?.courseTotal ? String(currentCustomer.courseTotal) : '10';
     document.getElementById('courseSelectWrap').style.display =
@@ -348,14 +439,15 @@
   }
 
   async function savePlan() {
-    const plan   = document.querySelector('input[name="planType"]:checked')?.value;
-    const total  = document.getElementById('courseTotal').value;
+    const plan       = document.querySelector('input[name="planType"]:checked')?.value;
+    const total      = document.getElementById('courseTotal').value;
+    const courseName = document.getElementById('courseTypeSelect').value;
     if (!plan) return;
 
     const btn = document.querySelector('#planModal .btn-gold');
     btn.disabled = true; btn.textContent = '保存中...';
 
-    const res = await setPlan(customerId, plan, plan === '回数コース' ? total : '');
+    const res = await setPlan(customerId, plan, plan === '回数コース' ? total : '', plan === '回数コース' ? courseName : '');
     btn.disabled = false; btn.textContent = '保存する';
 
     if (res && res.success) {
@@ -410,16 +502,23 @@
   let cachedCoursePrices = null;
 
   async function openPaymentModal() {
+    await ensureCourseTypesLoaded();
     if (!cachedCoursePrices) {
       const data = await getCoursePrices();
       cachedCoursePrices = data?.coursePrices || {};
     }
+    // コース種別セレクトを動的生成
+    const typeSel = document.getElementById('paymentCourseType');
+    typeSel.innerHTML = '<option value="">種別を選択</option>' +
+      cachedCourseTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+
     document.getElementById('paymentType').value    = '都度払い';
     document.getElementById('paymentContent').value = '';
     document.getElementById('paymentAmount').value  = '';
     document.getElementById('paymentNote').value    = '';
-    document.getElementById('paymentContentWrap').style.display = 'block';
-    document.getElementById('paymentCourseWrap').style.display  = 'none';
+    document.getElementById('paymentContentWrap').style.display    = 'block';
+    document.getElementById('paymentCourseTypeWrap').style.display = 'none';
+    document.getElementById('paymentCourseWrap').style.display     = 'none';
     document.getElementById('paymentModal').classList.add('open');
   }
 
@@ -430,32 +529,38 @@
   function onPaymentTypeChange() {
     const type = document.getElementById('paymentType').value;
     const isCourse = type === 'コース申込';
-    document.getElementById('paymentContentWrap').style.display = isCourse ? 'none' : 'block';
-    document.getElementById('paymentCourseWrap').style.display  = isCourse ? 'block' : 'none';
+    document.getElementById('paymentContentWrap').style.display    = isCourse ? 'none' : 'block';
+    document.getElementById('paymentCourseTypeWrap').style.display = isCourse ? 'block' : 'none';
+    document.getElementById('paymentCourseWrap').style.display     = isCourse ? 'block' : 'none';
     if (isCourse) onPaymentCourseChange();
   }
 
   function onPaymentCourseChange() {
-    const c = document.getElementById('paymentCourse').value;
-    const price = cachedCoursePrices?.[c] || 0;
+    const courseType = document.getElementById('paymentCourseType').value;
+    const count      = document.getElementById('paymentCourse').value;
+    // まず COURSE_PRICES_V2 で料金を探す
+    const key = courseType + '_' + count;
+    let price = cachedCoursePricesV2?.[key] || 0;
+    // なければ従来の COURSE_PRICES から取得
+    if (!price) price = cachedCoursePrices?.[count] || 0;
     document.getElementById('paymentAmount').value = price || '';
   }
 
   async function savePayment() {
-    const type    = document.getElementById('paymentType').value;
+    const type     = document.getElementById('paymentType').value;
     const isCourse = type === 'コース申込';
-    const content = isCourse
-      ? document.getElementById('paymentCourse').value + '回コース'
+    const courseType = document.getElementById('paymentCourseType').value;
+    const courseNum  = isCourse ? document.getElementById('paymentCourse').value : '';
+    const content  = isCourse
+      ? (courseType ? courseType + ' ' : '') + courseNum + '回コース'
       : document.getElementById('paymentContent').value.trim();
-    const amount  = parseInt(document.getElementById('paymentAmount').value) || 0;
-    const note    = document.getElementById('paymentNote').value.trim();
+    const amount   = parseInt(document.getElementById('paymentAmount').value) || 0;
+    const note     = document.getElementById('paymentNote').value.trim();
 
     if (amount <= 0) { alert('金額を入力してください'); return; }
 
     const btn = document.querySelector('#paymentModal .btn-gold');
     btn.disabled = true; btn.textContent = '記録中...';
-
-    const courseNum = isCourse ? document.getElementById('paymentCourse').value : '';
 
     const [res, planRes] = await Promise.all([
       recordPayment({
@@ -466,7 +571,7 @@
         amount  : String(amount),
         note,
       }),
-      isCourse ? setPlan(customerId, '回数コース', courseNum) : Promise.resolve(null),
+      isCourse ? setPlan(customerId, '回数コース', courseNum, courseType) : Promise.resolve(null),
     ]);
 
     btn.disabled = false; btn.textContent = '記録する';

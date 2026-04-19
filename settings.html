@@ -87,6 +87,7 @@
         <button class="settings-tab" onclick="showSection('section-price', this)">メニュー単価</button>
         <button class="settings-tab" onclick="showSection('section-course', this)">コース料金</button>
         <button class="settings-tab" onclick="showSection('section-closed', this)">定休日設定</button>
+        <button class="settings-tab" onclick="showSection('section-coursemgmt', this)">コース管理</button>
       </div>
 
       <!-- メニュー別ポイント設定 -->
@@ -140,6 +141,41 @@
         </div>
       </div>
 
+      <!-- コース管理 -->
+      <div id="section-coursemgmt" style="display:none;">
+        <div class="card">
+          <div class="card-title">🗂 コース種別管理</div>
+          <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:20px;">
+            コース種別（例：全身脱毛、VIO脱毛）と、各種別・回数ごとの料金を設定します。
+          </p>
+
+          <!-- コース種別リスト -->
+          <div style="margin-bottom:20px;">
+            <div style="font-weight:600;margin-bottom:10px;font-size:0.95rem;">コース種別</div>
+            <div id="courseTypeList" style="display:flex;flex-wrap:wrap;gap:8px;min-height:32px;margin-bottom:12px;"></div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="text" id="newCourseTypeInput" placeholder="例：脇脱毛"
+                style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;width:200px;"
+                onkeydown="if(event.key==='Enter') addCourseType()">
+              <button class="btn btn-outline" onclick="addCourseType()">＋ 追加</button>
+            </div>
+          </div>
+
+          <!-- コース料金マトリクス -->
+          <div style="margin-bottom:20px;">
+            <div style="font-weight:600;margin-bottom:10px;font-size:0.95rem;">コース料金（種別 × 回数）</div>
+            <div id="coursePriceMatrix">
+              <div class="loading"><div class="spinner"></div> 読み込み中...</div>
+            </div>
+          </div>
+
+          <div style="margin-top:20px;">
+            <button class="btn btn-gold" onclick="saveCourseTypeSettings()">保存する</button>
+            <span id="courseMgmtMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
+          </div>
+        </div>
+      </div>
+
       <!-- 定休日設定 -->
       <div id="section-closed" style="display:none;">
         <div class="card">
@@ -186,7 +222,7 @@
   // ────────────────────────────────────────────────
   //  タブ切り替え
   // ────────────────────────────────────────────────
-  const SECTION_IDS = ['section-point', 'section-price', 'section-course', 'section-closed'];
+  const SECTION_IDS = ['section-point', 'section-price', 'section-course', 'section-closed', 'section-coursemgmt'];
 
   function showSection(id, tabEl) {
     SECTION_IDS.forEach(sid => {
@@ -435,11 +471,119 @@
     }
   }
 
+  // ────────────────────────────────────────────────
+  //  コース種別管理
+  // ────────────────────────────────────────────────
+  let currentCourseTypes  = [];
+  let currentCoursePricesV2 = {};
+  const COURSE_COUNTS = ['10', '12', '15'];
+
+  async function loadCourseTypes() {
+    const data = await getCourseTypes();
+    if (!data) return;
+    currentCourseTypes    = data.courseTypes    || [];
+    currentCoursePricesV2 = data.coursePrices   || {};
+    renderCourseTypeList();
+    renderCoursePriceMatrix();
+  }
+
+  function renderCourseTypeList() {
+    const el = document.getElementById('courseTypeList');
+    if (currentCourseTypes.length === 0) {
+      el.innerHTML = '<span style="color:var(--text-light);font-size:0.88rem;">種別なし</span>';
+      return;
+    }
+    el.innerHTML = currentCourseTypes.map((t, idx) => `
+      <span style="display:inline-flex;align-items:center;gap:6px;background:var(--gold-bg);border:1px solid var(--gold-light);border-radius:20px;padding:5px 14px;font-size:0.9rem;font-weight:600;">
+        ${t}
+        <button onclick="removeCourseType(${idx})"
+          style="background:none;border:none;cursor:pointer;color:#B85042;font-size:1rem;padding:0;line-height:1;">×</button>
+      </span>`).join('');
+  }
+
+  function renderCoursePriceMatrix() {
+    const el = document.getElementById('coursePriceMatrix');
+    if (currentCourseTypes.length === 0) {
+      el.innerHTML = '<p style="color:var(--text-light);font-size:0.88rem;">先にコース種別を追加してください。</p>';
+      return;
+    }
+    el.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>コース種別</th>
+              ${COURSE_COUNTS.map(c => `<th style="width:160px;text-align:right;">${c}回コース（円）</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${currentCourseTypes.map(t => `
+              <tr>
+                <td style="font-weight:600;">${t}</td>
+                ${COURSE_COUNTS.map(c => {
+                  const key = t + '_' + c;
+                  const val = currentCoursePricesV2[key] || 0;
+                  return `<td style="text-align:right;">
+                    <input type="number" min="0" step="1000"
+                      data-key="${key}"
+                      value="${val}"
+                      style="width:120px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;text-align:right;"
+                      onchange="currentCoursePricesV2['${key}'] = parseInt(this.value)||0">
+                    <span style="color:var(--text-light);font-size:0.85rem;margin-left:4px;">円</span>
+                  </td>`;
+                }).join('')}
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  function addCourseType() {
+    const input = document.getElementById('newCourseTypeInput');
+    const val   = input.value.trim();
+    if (!val) return;
+    if (!currentCourseTypes.includes(val)) {
+      currentCourseTypes.push(val);
+      renderCourseTypeList();
+      renderCoursePriceMatrix();
+    }
+    input.value = '';
+  }
+
+  function removeCourseType(idx) {
+    const removed = currentCourseTypes.splice(idx, 1)[0];
+    // 削除した種別の料金エントリも削除
+    COURSE_COUNTS.forEach(c => {
+      delete currentCoursePricesV2[removed + '_' + c];
+    });
+    renderCourseTypeList();
+    renderCoursePriceMatrix();
+  }
+
+  async function saveCourseTypeSettings() {
+    // テーブルのinput値を読み取って currentCoursePricesV2 を更新
+    document.querySelectorAll('#coursePriceMatrix input[data-key]').forEach(input => {
+      currentCoursePricesV2[input.dataset.key] = parseInt(input.value) || 0;
+    });
+    const btn = document.querySelector('#section-coursemgmt .btn-gold');
+    btn.disabled = true; btn.textContent = '保存中...';
+    document.getElementById('courseMgmtMsg').textContent = '';
+    const res = await saveCourseTypes(currentCourseTypes, currentCoursePricesV2);
+    btn.disabled = false; btn.textContent = '保存する';
+    if (res && res.success) {
+      document.getElementById('courseMgmtMsg').innerHTML = '<span style="color:#2E7D4F;">✓ 保存しました</span>';
+      setTimeout(() => { document.getElementById('courseMgmtMsg').textContent = ''; }, 3000);
+    } else {
+      document.getElementById('courseMgmtMsg').innerHTML = '<span style="color:#B71C1C;">保存に失敗しました</span>';
+    }
+  }
+
   // 初期ロード
   loadSettings();
   loadPrices();
   loadCoursePrices();
   loadClosedDays();
+  loadCourseTypes();
 </script>
 </body>
 </html>
