@@ -218,3 +218,8 @@ async function adjustCourseRemaining(customerId, delta) {
 async function setCourseRemaining(customerId, value) {
   return apiGet('setCourseRemaining', { customerId, value: String(value) });
 }
+
+/** 顧客パスワードリセット（管理者） */
+async function resetCustomerPassword(customerId) {
+  return apiGet('resetCustomerPassword', { customerId });
+}

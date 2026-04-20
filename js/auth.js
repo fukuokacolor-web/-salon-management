@@ -9,8 +9,14 @@ const AUTH_KEY = 'salon_api_key';
  */
 async function login(password) {
   try {
-    const url = GAS_URL + '?action=login&password=' + encodeURIComponent(password);
-    const res  = await fetch(url, { redirect: 'follow' });
+    // CORS preflight を回避するため Content-Type は text/plain で送信
+    // （GAS側で JSON.parse する）
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'adminLogin', password: password }),
+    });
     const text = await res.text();
     let data;
     try {

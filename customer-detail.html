@@ -208,6 +208,21 @@
         </div>
       </div>
 
+      <!-- パスワードリセット（ハッシュ登録済みの場合のみ表示） -->
+      <div id="passwordResetCard" style="display:none;">
+        <div class="card">
+          <div class="card-title">🔑 ログインパスワード</div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:200px;">
+              <div style="font-size:0.9rem;color:var(--text);">このお客様はポイント交換ログイン用パスワードを登録済みです。</div>
+              <div style="font-size:0.8rem;color:var(--text-light);margin-top:4px;">お客様がパスワードを忘れた場合にリセットできます。</div>
+            </div>
+            <button onclick="resetPassword()" class="btn"
+              style="background:#E89B3C;color:#fff;border:none;">パスワードをリセット</button>
+          </div>
+        </div>
+      </div>
+
       <!-- 支払い記録 -->
       <div class="card">
         <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
@@ -635,6 +650,12 @@
     // プランカード描画
     renderPlanCard(c);
 
+    // パスワードリセットカード表示制御
+    const pwCard = document.getElementById('passwordResetCard');
+    if (pwCard) {
+      pwCard.style.display = c.hasPassword ? 'block' : 'none';
+    }
+
     // 来店記録描画
     const visEl = document.getElementById('visitContent');
     const visits = data.visits || [];
@@ -662,6 +683,22 @@
           </tbody>
         </table>
       </div>`;
+  }
+
+  // パスワードリセット
+  async function resetPassword() {
+    if (!customerId) return;
+    if (!confirm('この顧客のパスワードをリセットしますか？\n顧客は再度パスワード登録が必要になります。')) return;
+    const btn = document.querySelector('#passwordResetCard button');
+    if (btn) { btn.disabled = true; btn.textContent = 'リセット中...'; }
+    const res = await resetCustomerPassword(customerId);
+    if (btn) { btn.disabled = false; btn.textContent = 'パスワードをリセット'; }
+    if (res?.success) {
+      alert(res.message || 'パスワードをリセットしました');
+      loadDetail();
+    } else {
+      alert('リセットに失敗しました: ' + (res?.message || res?.error || '不明なエラー'));
+    }
   }
 
   loadDetail();
