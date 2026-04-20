@@ -223,3 +223,23 @@ async function setCourseRemaining(customerId, value) {
 async function resetCustomerPassword(customerId) {
   return apiGet('resetCustomerPassword', { customerId });
 }
+
+/** キャンセルポリシー文言を取得 */
+async function getCancelPolicy() {
+  return apiGet('getCancelPolicy');
+}
+
+/** キャンセルポリシー文言を保存 */
+async function saveCancelPolicy(text) {
+  return apiGet('saveCancelPolicy', { text: text || '' });
+}
+
+/** バックアップ警告閾値（日数）を取得 */
+async function getBackupStaleDays() {
+  return apiGet('getBackupStaleDays');
+}
+
+/** バックアップ警告閾値（日数）を保存 */
+async function saveBackupStaleDays(days) {
+  return apiGet('saveBackupStaleDays', { days: String(days) });
+}

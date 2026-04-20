@@ -527,7 +527,9 @@
             ${list.map(r => {
               const isToday   = r.date === todayStr;
               const isCancel  = r.status === 'キャンセル';
-              const rowClass  = isToday ? 'today-row' : '';
+              const isDone    = r.status === '完了';
+              const statusClass = isCancel ? 'status-cancelled' : (isDone ? 'status-completed' : 'status-pending');
+              const rowClass  = (isToday ? 'today-row ' : '') + statusClass;
               const rowStyle  = isCancel ? 'opacity:0.5' : '';
               const todayMark = isToday ? '<span class="today-mark">TODAY</span>' : '';
               return `

@@ -88,6 +88,7 @@
         <button class="settings-tab" onclick="showSection('section-course', this)">コース料金</button>
         <button class="settings-tab" onclick="showSection('section-closed', this)">定休日設定</button>
         <button class="settings-tab" onclick="showSection('section-coursemgmt', this)">コース管理</button>
+        <button class="settings-tab" onclick="showSection('section-ops', this)">運用設定</button>
       </div>
 
       <!-- メニュー別ポイント設定 -->
@@ -210,6 +211,39 @@
         </div>
       </div>
 
+      <!-- 運用設定 -->
+      <div id="section-ops" style="display:none;">
+        <div class="card">
+          <div class="card-title">📝 キャンセルポリシー文言</div>
+          <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:12px;">
+            LINE予約キャンセル完了メッセージの末尾に追記される文言です。空欄の場合は追記されません。
+          </p>
+          <textarea id="cancelPolicyInput" rows="5"
+            style="width:100%;max-width:600px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;font-family:inherit;resize:vertical;"
+            placeholder="例：キャンセルは前日までにお願いいたします。当日キャンセルの場合は..."></textarea>
+          <div style="margin-top:14px;">
+            <button class="btn btn-gold" onclick="saveCancelPolicySettings()">保存する</button>
+            <span id="cancelPolicyMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:20px;">
+          <div class="card-title">💾 バックアップ警告閾値（日数）</div>
+          <p style="color:var(--text-light);font-size:0.88rem;margin-bottom:12px;">
+            ダッシュボードの「最新バックアップ」カードで警告表示する日数の閾値です。（デフォルト：3日）
+          </p>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="number" id="backupStaleDaysInput" min="1" max="365" step="1"
+              style="width:120px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.95rem;text-align:right;">
+            <span style="color:var(--text-light);font-size:0.9rem;">日以上古い場合に警告</span>
+          </div>
+          <div style="margin-top:14px;">
+            <button class="btn btn-gold" onclick="saveBackupStaleDaysSettings()">保存する</button>
+            <span id="backupStaleMsg" style="margin-left:12px;font-size:0.88rem;color:var(--text-light);"></span>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -222,7 +256,7 @@
   // ────────────────────────────────────────────────
   //  タブ切り替え
   // ────────────────────────────────────────────────
-  const SECTION_IDS = ['section-point', 'section-price', 'section-course', 'section-closed', 'section-coursemgmt'];
+  const SECTION_IDS = ['section-point', 'section-price', 'section-course', 'section-closed', 'section-coursemgmt', 'section-ops'];
 
   function showSection(id, tabEl) {
     SECTION_IDS.forEach(sid => {
@@ -578,12 +612,69 @@
     }
   }
 
+  // ────────────────────────────────────────────────
+  //  運用設定（キャンセルポリシー・バックアップ閾値）
+  // ────────────────────────────────────────────────
+  async function loadOpsSettings() {
+    const [policy, backup] = await Promise.all([
+      getCancelPolicy(),
+      getBackupStaleDays(),
+    ]);
+    if (policy && typeof policy.text === 'string') {
+      document.getElementById('cancelPolicyInput').value = policy.text;
+    }
+    if (backup && backup.days) {
+      document.getElementById('backupStaleDaysInput').value = backup.days;
+    } else {
+      document.getElementById('backupStaleDaysInput').value = 3;
+    }
+  }
+
+  async function saveCancelPolicySettings() {
+    const btn = document.querySelector('#section-ops .btn-gold');
+    const msgEl = document.getElementById('cancelPolicyMsg');
+    btn.disabled = true; btn.textContent = '保存中...';
+    msgEl.textContent = '';
+    const text = document.getElementById('cancelPolicyInput').value;
+    const res = await saveCancelPolicy(text);
+    btn.disabled = false; btn.textContent = '保存する';
+    if (res && res.success) {
+      msgEl.innerHTML = '<span style="color:#2E7D4F;">✓ 保存しました</span>';
+      setTimeout(() => { msgEl.textContent = ''; }, 3000);
+    } else {
+      msgEl.innerHTML = '<span style="color:#B71C1C;">保存に失敗しました</span>';
+    }
+  }
+
+  async function saveBackupStaleDaysSettings() {
+    const btns = document.querySelectorAll('#section-ops .btn-gold');
+    const btn = btns[btns.length - 1];
+    const msgEl = document.getElementById('backupStaleMsg');
+    btn.disabled = true; btn.textContent = '保存中...';
+    msgEl.textContent = '';
+    const days = parseInt(document.getElementById('backupStaleDaysInput').value, 10);
+    if (isNaN(days) || days < 1 || days > 365) {
+      msgEl.innerHTML = '<span style="color:#B71C1C;">1〜365の範囲で指定してください</span>';
+      btn.disabled = false; btn.textContent = '保存する';
+      return;
+    }
+    const res = await saveBackupStaleDays(days);
+    btn.disabled = false; btn.textContent = '保存する';
+    if (res && res.success) {
+      msgEl.innerHTML = '<span style="color:#2E7D4F;">✓ 保存しました</span>';
+      setTimeout(() => { msgEl.textContent = ''; }, 3000);
+    } else {
+      msgEl.innerHTML = '<span style="color:#B71C1C;">' + ((res && res.message) || '保存に失敗しました') + '</span>';
+    }
+  }
+
   // 初期ロード
   loadSettings();
   loadPrices();
   loadCoursePrices();
   loadClosedDays();
   loadCourseTypes();
+  loadOpsSettings();
 </script>
 </body>
 </html>

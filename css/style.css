@@ -818,6 +818,20 @@ input:focus, select:focus, textarea:focus {
   }
   table.responsive-card tbody td:empty,
   .responsive-card table tbody td:empty { display: none; }
+
+  /* ─── 予約カードのステータス別左端カラーバー（reservations.html 専用） ── */
+  table.responsive-card tbody tr.status-pending,
+  .responsive-card table tbody tr.status-pending {
+    border-left: 4px solid #D4688A;
+  }
+  table.responsive-card tbody tr.status-completed,
+  .responsive-card table tbody tr.status-completed {
+    border-left: 4px solid #4CAF50;
+  }
+  table.responsive-card tbody tr.status-cancelled,
+  .responsive-card table tbody tr.status-cancelled {
+    border-left: 4px solid #E53935;
+  }
 }
 @media (max-width: 480px) {
   .stat-grid,
