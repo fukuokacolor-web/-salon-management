@@ -205,7 +205,7 @@
     }
     el.innerHTML = `
       <div class="table-wrap">
-        <table>
+        <table class="responsive-card">
           <thead>
             <tr>
               <th>顧客ID</th>
@@ -221,14 +221,14 @@
           <tbody>
             ${list.map(c => `
               <tr>
-                <td><span style="color:var(--text-light);font-size:0.82rem;">${c.customerId || '—'}</span></td>
-                <td><a href="customer-detail.html?id=${encodeURIComponent(c.customerId)}" style="color:var(--gold-dark);text-decoration:underline;font-weight:600;">${c.name || '（未登録）'}</a></td>
-                <td>${c.phone || '—'}</td>
-                <td>${planBadge(c)}</td>
-                <td>${remainingCell(c)}</td>
-                <td><span class="badge badge-gold">${c.points ?? 0} pt</span></td>
-                <td>${formatDate(c.lastVisit)}</td>
-                <td>${formatDate(c.createdAt)}</td>
+                <td data-label="顧客ID"><span style="color:var(--text-light);font-size:0.82rem;">${c.customerId || '—'}</span></td>
+                <td data-label="お名前"><a href="customer-detail.html?id=${encodeURIComponent(c.customerId)}" style="color:var(--gold-dark);text-decoration:underline;font-weight:600;">${c.name || '（未登録）'}</a></td>
+                <td data-label="電話番号">${c.phone || '—'}</td>
+                <td data-label="プラン">${planBadge(c)}</td>
+                <td data-label="残回数">${remainingCell(c)}</td>
+                <td data-label="保有ポイント"><span class="badge badge-gold">${c.points ?? 0} pt</span></td>
+                <td data-label="最終来店日">${formatDate(c.lastVisit)}</td>
+                <td data-label="登録日">${formatDate(c.createdAt)}</td>
               </tr>`).join('')}
           </tbody>
         </table>

@@ -85,6 +85,14 @@
 
     <div class="page-body">
 
+      <!-- バックアップ可視化 -->
+      <div id="backupCard" style="display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;margin-bottom:16px;font-size:0.9rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:1.1rem;">💾</span>
+        <span style="color:var(--text-light);">最新バックアップ:</span>
+        <span id="backupDate" style="font-weight:600;color:var(--text);">—</span>
+        <span id="backupBadge" style="display:none;"></span>
+      </div>
+
       <!-- 統計カード -->
       <div class="stat-grid stat-grid-4">
         <div class="stat-card">
@@ -220,6 +228,28 @@
     document.getElementById('statCustomer').textContent = data.customerCount ?? 0;
     document.getElementById('statMonthSales').textContent = `¥${(data.monthSales || 0).toLocaleString('ja-JP')}`;
     document.getElementById('todayBadge').textContent   = `本日 ${data.todayCount ?? 0} 件`;
+
+    // バックアップ情報
+    const bk = data.lastBackup;
+    const bkCard = document.getElementById('backupCard');
+    if (bk && bk.date) {
+      bkCard.style.display = 'flex';
+      document.getElementById('backupDate').textContent = bk.date;
+      const badge = document.getElementById('backupBadge');
+      if (bk.stale) {
+        bkCard.style.borderColor = '#E89B3C';
+        bkCard.style.background  = '#FFF7E8';
+        badge.style.display = 'inline-block';
+        badge.style.cssText = 'display:inline-block;background:#E89B3C;color:#fff;border-radius:10px;padding:2px 10px;font-size:0.78rem;font-weight:600;';
+        badge.textContent = `⚠ ${bk.daysAgo}日前`;
+      } else {
+        bkCard.style.borderColor = '';
+        bkCard.style.background  = '#fff';
+        badge.style.display = 'none';
+      }
+    } else {
+      bkCard.style.display = 'none';
+    }
 
     // コース残回数アラート描画
     const alerts = data.courseAlerts || [];

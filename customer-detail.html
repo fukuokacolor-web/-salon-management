@@ -489,7 +489,7 @@
     }
     el.innerHTML = `
       <div class="table-wrap">
-        <table>
+        <table class="responsive-card">
           <thead>
             <tr>
               <th>日付</th>
@@ -502,11 +502,11 @@
           <tbody>
             ${payments.map(p => `
               <tr>
-                <td style="white-space:nowrap;">${p.date}</td>
-                <td><span class="badge ${p.type === 'コース申込' ? 'badge-gold' : ''}" style="${p.type !== 'コース申込' ? 'background:#f0f4f8;color:#555;' : ''}">${p.type}</span></td>
-                <td>${p.content || '—'}</td>
-                <td style="text-align:right;font-weight:600;">¥${Number(p.amount).toLocaleString('ja-JP')}</td>
-                <td style="color:var(--text-light);font-size:0.85rem;">${p.note || ''}</td>
+                <td data-label="日付" style="white-space:nowrap;">${p.date}</td>
+                <td data-label="種別"><span class="badge ${p.type === 'コース申込' ? 'badge-gold' : ''}" style="${p.type !== 'コース申込' ? 'background:#f0f4f8;color:#555;' : ''}">${p.type}</span></td>
+                <td data-label="内容">${p.content || '—'}</td>
+                <td data-label="金額" style="text-align:right;font-weight:600;">¥${Number(p.amount).toLocaleString('ja-JP')}</td>
+                <td data-label="備考" style="color:var(--text-light);font-size:0.85rem;">${p.note || ''}</td>
               </tr>`).join('')}
           </tbody>
         </table>
@@ -665,7 +665,7 @@
     }
     visEl.innerHTML = `
       <div class="table-wrap">
-        <table>
+        <table class="responsive-card">
           <thead>
             <tr>
               <th>来店日時</th>
@@ -676,9 +676,9 @@
           <tbody>
             ${visits.map(v => `
               <tr>
-                <td>${v.date}</td>
-                <td>${v.menu || '—'}</td>
-                <td><span class="badge badge-gold">+${v.pointsAdded} pt</span></td>
+                <td data-label="来店日時">${v.date}</td>
+                <td data-label="メニュー">${v.menu || '—'}</td>
+                <td data-label="付与ポイント"><span class="badge badge-gold">+${v.pointsAdded} pt</span></td>
               </tr>`).join('')}
           </tbody>
         </table>

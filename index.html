@@ -28,6 +28,10 @@
       <form class="login-form" id="loginForm">
         <label for="password">Password</label>
         <input type="password" id="password" placeholder="パスワードを入力" autocomplete="current-password" required>
+        <label style="display:flex;align-items:center;gap:8px;font-size:0.88rem;color:#666;margin:10px 0 6px;font-weight:400;cursor:pointer;">
+          <input type="checkbox" id="rememberMe" style="width:auto;margin:0;">
+          <span>ログイン状態を保持する</span>
+        </label>
         <button type="submit" class="btn-login" id="loginBtn">ログイン</button>
       </form>
 
@@ -40,13 +44,14 @@
     document.title = SALON_NAME + ' - 管理画面';
 
     // すでにログイン済みならダッシュボードへ
-    if (sessionStorage.getItem('salon_api_key')) {
+    if (localStorage.getItem('salon_api_key') || sessionStorage.getItem('salon_api_key')) {
       window.location.href = 'dashboard.html';
     }
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const password = document.getElementById('password').value;
+      const remember = document.getElementById('rememberMe').checked;
       const btn      = document.getElementById('loginBtn');
       const errorEl  = document.getElementById('loginError');
 
@@ -54,7 +59,7 @@
       btn.textContent = '確認中...';
       errorEl.classList.remove('show');
 
-      const result = await login(password);
+      const result = await login(password, remember);
 
       if (result.success) {
         window.location.href = 'dashboard.html';

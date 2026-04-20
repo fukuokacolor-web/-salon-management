@@ -776,6 +776,48 @@ input:focus, select:focus, textarea:focus {
   .stat-grid-4 { grid-template-columns: 1fr 1fr; gap: 12px; }
   .page-body { padding: 16px; }
   .page-header { padding: 14px 16px; }
+
+  /* ─── カード化テーブル（スマホ専用） ───────── */
+  table.responsive-card,
+  .responsive-card table { width: 100%; border-collapse: collapse; }
+  table.responsive-card thead,
+  .responsive-card table thead { display: none; }
+  table.responsive-card tbody tr,
+  .responsive-card table tbody tr {
+    display: block;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  table.responsive-card tbody td,
+  .responsive-card table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border: none;
+    border-bottom: 1px solid #f3f3f3;
+    text-align: right;
+    word-break: break-word;
+  }
+  table.responsive-card tbody td:last-child,
+  .responsive-card table tbody td:last-child { border-bottom: none; }
+  table.responsive-card tbody td::before,
+  .responsive-card table tbody td::before {
+    content: attr(data-label);
+    color: var(--text-light);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-align: left;
+    flex-shrink: 0;
+    margin-right: 8px;
+  }
+  table.responsive-card tbody td:empty,
+  .responsive-card table tbody td:empty { display: none; }
 }
 @media (max-width: 480px) {
   .stat-grid,
