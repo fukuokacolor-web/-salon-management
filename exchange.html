@@ -691,7 +691,7 @@ async function doLogin() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner-inline"></span>確認中...';
 
-  // ① 電話番号でcustomerIdを取得
+  // ① 電話番号の存在確認（顧客IDや氏名は取得しない＝情報漏洩防止）
   const checkRes = await publicApiGet('checkPhone', { phone });
   if (!checkRes || !checkRes.found) {
     showError(errEl, 'この電話番号はサロンに登録されていません');
@@ -704,11 +704,9 @@ async function doLogin() {
     return;
   }
 
-  // ② hash(customerId + ':' + password)
-  const hashedPassword = await hashPasswordFront(checkRes.customerId, password);
-
-  // ③ ログイン
-  const loginRes = await publicApiGet('loginWithPassword', { phone, hashedPassword });
+  // ② サーバー側で hashPassword_(customerId, password) を計算するため、
+  //    フロントはパスワードをそのまま送る（HTTPS 前提）
+  const loginRes = await publicApiGet('loginWithPassword', { phone, password });
   if (!loginRes || !loginRes.success) {
     showError(errEl, (loginRes && loginRes.message) || '電話番号またはパスワードが違います');
     resetBtn(btn, 'ログイン');
@@ -744,7 +742,7 @@ async function doRegister() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner-inline"></span>登録中...';
 
-  // 電話番号チェック
+  // 電話番号チェック（顧客IDは返さない）
   const checkRes = await publicApiGet('checkPhone', { phone });
   if (!checkRes || !checkRes.found) {
     showError(errEl, 'この電話番号はサロンに登録されていません');
@@ -757,11 +755,10 @@ async function doRegister() {
     return;
   }
 
-  // ハッシュ化してパスワード登録
-  const hashedPassword = await hashPasswordFront(checkRes.customerId, password);
+  // サーバー側でハッシュ化するため、plaintext を送信（HTTPS 前提）
   const regRes = await publicApiGet('registerPassword', {
-    customerId: checkRes.customerId,
-    hashedPassword,
+    phone,
+    password,
   });
 
   if (!regRes || !regRes.success) {
