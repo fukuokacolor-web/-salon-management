@@ -299,20 +299,28 @@ def line_phone(x, y, w, h, title_txt, body_fn):
     body_fn(x + Inches(0.1), y + Inches(0.55), w - Inches(0.2), h - Inches(0.65))
 
 def body1(bx, by, bw, bh):
-    # リッチメニュー風（2x3ボタン）
-    btns = [("予約", ROSE), ("変更", GOLD), ("キャンセル", DARK_ROSE),
-            ("残回数", ROSE), ("営業日", GOLD), ("お問合せ", DARK_ROSE)]
-    for i, (t, c) in enumerate(btns):
-        r = i // 3; cc = i % 3
-        bx2 = bx + Inches(0.15) + Inches(cc * 0.9)
-        by2 = by + Inches(0.7) + Inches(r * 0.85)
-        add_rounded(s, bx2, by2, Inches(0.85), Inches(0.8), fill=c)
-        add_text(s, bx2, by2, Inches(0.85), Inches(0.8), t,
-                 size=10, bold=True, color=WHITE,
-                 align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+    # リッチメニュー風（上段2ボタン＋下段フルワイド / 実装と同じ3ボタン構成）
     add_text(s, bx, by + Inches(0.1), bw, Inches(0.4),
              "リッチメニュー", size=9, color=GRAY,
              align=PP_ALIGN.CENTER)
+    # 上段: 予約する / 予約確認
+    top_btns = [("予約する", ROSE), ("予約確認", GOLD)]
+    top_w = Inches(1.3); top_h = Inches(0.95)
+    for i, (t, c) in enumerate(top_btns):
+        bx2 = bx + Inches(0.15) + Inches(i * 1.4)
+        by2 = by + Inches(1.45)
+        add_rounded(s, bx2, by2, top_w, top_h, fill=c)
+        add_text(s, bx2, by2, top_w, top_h, t,
+                 size=11, bold=True, color=WHITE,
+                 align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+    # 下段: お問い合わせ（フルワイド）
+    full_w = Inches(2.7); full_h = Inches(0.95)
+    add_rounded(s, bx + Inches(0.15), by + Inches(2.5),
+                full_w, full_h, fill=DARK_ROSE)
+    add_text(s, bx + Inches(0.15), by + Inches(2.5),
+             full_w, full_h, "お問い合わせ",
+             size=12, bold=True, color=WHITE,
+             align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
 
 def body2(bx, by, bw, bh):
     # カレンダーグリッド
@@ -449,12 +457,12 @@ add_text(s, Inches(10.5), Inches(2.05), Inches(2), Inches(0.5),
          "2026/04/21 ▼",
          size=11, color=WHITE, anchor=MSO_ANCHOR.MIDDLE, align=PP_ALIGN.RIGHT)
 
-# 4カード（統計）
+# 4カード（統計）— 実装のダッシュボード表示項目に準拠
 stats = [
-    ("本日の予約", "5件",   ROSE),
-    ("今月の売上", "¥482,000", GOLD),
-    ("登録顧客数", "128名", DARK_ROSE),
-    ("要注意顧客", "3名",   ORANGE),
+    ("本日の予約", "5件",     ROSE),
+    ("本日の売上", "¥38,500", GOLD),
+    ("今月の売上", "¥482,000", DARK_ROSE),
+    ("コース残少", "3名",     ORANGE),
 ]
 for i, (t, v, c) in enumerate(stats):
     x = Inches(0.9 + i * 2.95)
@@ -490,21 +498,21 @@ for i, (tm, nm, mn) in enumerate(rows):
     add_text(s, Inches(5.0), yy, Inches(3.2), Inches(0.4),
              mn, size=11, color=GRAY, anchor=MSO_ANCHOR.MIDDLE)
 
-# 右: バックアップ＆売上サマリー
+# 右: バックアップ＆コース残回数アラート
 add_rounded(s, Inches(8.6), Inches(4.2), Inches(4.0), Inches(1.1),
             fill=WHITE, line=GREEN, line_w=1.5)
 add_text(s, Inches(8.7), Inches(4.25), Inches(3.8), Inches(0.4),
          "💾 最新バックアップ ✓", size=11, bold=True, color=GREEN)
 add_text(s, Inches(8.7), Inches(4.65), Inches(3.8), Inches(0.6),
-         "2026/04/19 05:00\n（週次 毎週日曜5時）",
+         "2026/04/19 02:00\n（毎週日曜 午前2時に自動実行）",
          size=10, color=BLACK)
 
 add_rounded(s, Inches(8.6), Inches(5.4), Inches(4.0), Inches(1.3),
-            fill=WHITE, line=GOLD, line_w=1.5)
+            fill=WHITE, line=ORANGE, line_w=1.5)
 add_text(s, Inches(8.7), Inches(5.45), Inches(3.8), Inches(0.4),
-         "📊 売上サマリー", size=11, bold=True, color=DARK_ROSE)
+         "⚠ コース残回数アラート", size=11, bold=True, color=ORANGE)
 add_text(s, Inches(8.7), Inches(5.85), Inches(3.8), Inches(0.8),
-         "今週: ¥128,500\n今月: ¥482,000\n前月比: +12%",
+         "残り4回以下: 3名\n→ 次回来店時にご案内を",
          size=10, color=BLACK, line_spacing=1.3)
 add_footer(s, 7)
 
@@ -603,8 +611,8 @@ add_footer(s, 8)
 s = prs.slides.add_slide(BLANK); add_bg(s)
 add_title_bar(s, "オーナー体験③ 売上レポート", 9)
 add_text(s, Inches(0.6), Inches(1.3), Inches(12), Inches(0.5),
-         "月別・日別の売上が、グラフで一目瞭然。CSVでダウンロードも可能。",
-         size=15, color=DARK_ROSE)
+         "月別・日別の売上が、グラフで一目瞭然。売上明細・顧客一覧・予約台帳はCSVでダウンロードできます（Excel対応）。",
+         size=14, color=DARK_ROSE)
 
 # 左：棒グラフ
 add_rounded(s, Inches(0.5), Inches(2.0), Inches(7.5), Inches(4.8),
@@ -635,8 +643,8 @@ add_text(s, Inches(0.6), Inches(6.35), Inches(6.8), Inches(0.3),
 add_rounded(s, Inches(8.2), Inches(2.0), Inches(4.6), Inches(4.8),
             fill=WHITE, line=GOLD, line_w=1.5)
 add_text(s, Inches(8.4), Inches(2.1), Inches(4.3), Inches(0.4),
-         "📁 支払い履歴ダウンロード",
-         size=13, bold=True, color=DARK_ROSE)
+         "📁 CSVダウンロード（売上／顧客／予約）",
+         size=12, bold=True, color=DARK_ROSE)
 # テーブル風
 csv_headers = ["日付", "顧客", "金額"]
 csv_rows = [
@@ -787,10 +795,10 @@ add_rounded(s, Inches(6.9), Inches(2.0), Inches(6.0), Inches(4.5),
 add_text(s, Inches(7.1), Inches(2.15), Inches(5.7), Inches(0.5),
          "💾 週次バックアップ", size=20, bold=True, color=GOLD)
 add_text(s, Inches(7.1), Inches(2.7), Inches(5.7), Inches(0.4),
-         "毎週日曜5時、自動でデータを保管",
+         "毎週日曜 午前2時、自動でデータを保管",
          size=12, color=DARK_ROSE)
 # スケジュールイメージ
-sched = [("日","5:00", True), ("月","", False), ("火","", False),
+sched = [("日","2:00", True), ("月","", False), ("火","", False),
          ("水","", False), ("木","", False), ("金","", False), ("土","", False)]
 for i, (d, tm, active) in enumerate(sched):
     x = Inches(7.15 + i * 0.8)
@@ -812,14 +820,14 @@ add_text(s, Inches(7.1), Inches(4.25), Inches(5.8), Inches(0.4),
 add_rounded(s, Inches(7.3), Inches(4.7), Inches(5.3), Inches(0.45),
             fill=WHITE, line=GREEN, line_w=1.5)
 add_text(s, Inches(7.3), Inches(4.7), Inches(5.3), Inches(0.45),
-         "✓ 2026/04/19 05:00 バックアップ完了",
+         "✓ 2026/04/19 02:00 バックアップ完了",
          size=12, bold=True, color=GREEN,
          align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
 # 効果
 add_rounded(s, Inches(7.1), Inches(5.3), Inches(5.7), Inches(1.0),
             fill=GOLD)
 add_text(s, Inches(7.1), Inches(5.3), Inches(5.7), Inches(1.0),
-         "💡 データ消失の心配なし\nいつでも過去30日分から復元可能",
+         "💡 データ消失の心配なし\n過去4週間分を自動保管",
          size=13, bold=True, color=WHITE,
          align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, line_spacing=1.3)
 
@@ -836,13 +844,13 @@ add_text(s, Inches(0.6), Inches(1.3), Inches(12), Inches(0.5),
 
 sec_items = [
     ("🔐", "パスワードはハッシュ化保存",
-     "万一データが見られても\nパスワードは復元不可能な\n形で保管されます。"),
-    ("🔒", "通信は暗号化",
-     "LINE・管理画面とサーバー間の\nすべての通信を暗号化。\n盗聴される心配はありません。"),
+     "SHA-256で不可逆変換して保存。\n万一データが見られても\nパスワードは復元不可能です。"),
+    ("🔒", "通信はすべて暗号化",
+     "LINE・管理画面とサーバー間の\n通信はHTTPSで暗号化。\n盗聴の心配はありません。"),
     ("👤", "共有PCでも安心",
-     "ログイン情報は保存せず、\nブラウザを閉じれば自動ログアウト。\n店舗の共用PCでも使えます。"),
-    ("📝", "全操作ログ記録",
-     "「誰がいつ何をしたか」を\n自動で記録。\nトラブル時の追跡が可能です。"),
+     "ログイン情報の保存を選べる方式。\nOFFならブラウザを閉じた時点で\n自動ログアウトします。"),
+    ("📝", "操作履歴を自動記録",
+     "管理者ログイン履歴と\nLINEメッセージ送受信履歴を\n自動記録。後から確認できます。"),
 ]
 for i, (icon, title, desc) in enumerate(sec_items):
     r = i // 2; c = i % 2
@@ -1100,9 +1108,9 @@ qas = [
     ("操作が難しそうで不安です。",
      "ご心配いりません。導入時にマニュアルをお渡しし、オンライン研修で実際に操作しながらご説明します。運用開始後もいつでも質問OK。"),
     ("データはどこに保管されますか？",
-     "Google社のクラウド（スプレッドシート）上に、オーナー様のアカウントで保管されます。データの所有権は完全にサロン様にあります。"),
+     "Google社のクラウド（Googleドライブ）上に、オーナー様のアカウントで保管されます。データの所有権は完全にサロン様にあります。"),
     ("既存の顧客データはどうなりますか？",
-     "エクセル・CSVで書き出せる形式であれば、一括でインポートできます。移行作業は弊社で代行しますのでご安心ください。"),
+     "現時点では売上明細・顧客一覧・予約台帳のCSV出力に対応しています。他システムからのデータ移行は個別にご相談のうえ対応いたします。"),
     ("途中で解約したくなったら？",
      "データはそのまま保持され、サロン様のGoogleアカウントに残ります。いつでも内容を確認・ダウンロードしていただけます。"),
     ("月の予約件数に制限はありますか？",

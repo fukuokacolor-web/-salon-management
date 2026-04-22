@@ -333,21 +333,29 @@ def slide05(c):
               font=FONT, size=13, color=DARK_ROSE)
 
     def body1(c, bx, by, bw, bh):
-        # リッチメニュー風（2x3）
-        btns = [("予約", ROSE), ("変更", GOLD), ("キャンセル", DARK_ROSE),
-                ("残回数", ROSE), ("営業日", GOLD), ("お問合せ", DARK_ROSE)]
-        btn_w = (bw - 8*mm) / 3
-        btn_h = (bh - 15*mm) / 2
+        # リッチメニュー風（上段2ボタン＋下段フルワイド / 実装と同じ3ボタン構成）
         draw_text(c, bx + bw/2, by + bh - 4*mm, "リッチメニュー",
                   font=FONT, size=8, color=GRAY, align='center')
-        for i, (t, col) in enumerate(btns):
-            r = i // 3; cc = i % 3
-            bx2 = bx + 2*mm + (btn_w + 2*mm) * cc
-            by2 = by + 2*mm + (btn_h + 2*mm) * (1 - r)
-            rounded(c, bx2, by2, btn_w, btn_h, 2*mm, fill_color=col)
-            draw_text_in_box(c, bx2, by2, btn_w, btn_h, t,
-                             font=FONT_B, size=9, color=WHITE,
+        # 上段: 予約する / 予約確認
+        top_btns = [("予約する", ROSE), ("予約確認", GOLD)]
+        gap = 2*mm
+        top_w = (bw - gap*3) / 2
+        top_h = (bh - 18*mm) / 2
+        top_y = by + 2*mm + top_h + gap
+        for i, (t, col) in enumerate(top_btns):
+            bx2 = bx + gap + (top_w + gap) * i
+            rounded(c, bx2, top_y, top_w, top_h, 2*mm, fill_color=col)
+            draw_text_in_box(c, bx2, top_y, top_w, top_h, t,
+                             font=FONT_B, size=10, color=WHITE,
                              align='center', valign='middle')
+        # 下段: お問い合わせ（フルワイド）
+        full_w = bw - gap*2
+        rounded(c, bx + gap, by + 2*mm, full_w, top_h, 2*mm,
+                fill_color=DARK_ROSE)
+        draw_text_in_box(c, bx + gap, by + 2*mm, full_w, top_h,
+                         "お問い合わせ",
+                         font=FONT_B, size=11, color=WHITE,
+                         align='center', valign='middle')
 
     def body2(c, bx, by, bw, bh):
         # カレンダー
@@ -494,12 +502,12 @@ def slide07(c):
               dash_y + dash_h - hdr_h - 2*mm + hdr_h/2 - 2,
               "2026/04/21 v", font=FONT, size=10, color=WHITE, align='right')
 
-    # 統計4カード
+    # 統計4カード — 実装のダッシュボード表示項目に準拠
     stats = [
-        ("本日の予約", "5件",     ROSE),
-        ("今月の売上", "¥482,000", GOLD),
-        ("登録顧客数", "128名",   DARK_ROSE),
-        ("要注意顧客", "3名",     ORANGE),
+        ("本日の予約", "5件",      ROSE),
+        ("本日の売上", "¥38,500",  GOLD),
+        ("今月の売上", "¥482,000", DARK_ROSE),
+        ("コース残少", "3名",      ORANGE),
     ]
     card_top = dash_y + dash_h - 15*mm - 2
     card_h = 22 * mm
@@ -550,17 +558,17 @@ def slide07(c):
     draw_text(c, side_x + 3*mm, bu_y + bu_h - 6*mm,
               "[OK] 最新バックアップ", font=FONT_B, size=11, color=GREEN)
     draw_multiline(c, side_x + 3*mm, bu_y + bu_h - 9*mm,
-                   "2026/04/19 05:00\n（週次 毎週日曜5時）",
+                   "2026/04/19 02:00\n（毎週日曜 午前2時に自動実行）",
                    font=FONT, size=9, color=BLACK, line_height=11)
-    # 売上サマリー
+    # コース残回数アラート
     sm_h = 24 * mm
     sm_y = list_y
     rounded(c, side_x, sm_y, side_w, sm_h, 2*mm,
-            fill_color=WHITE, stroke_color=GOLD, lw=1.5)
+            fill_color=WHITE, stroke_color=ORANGE, lw=1.5)
     draw_text(c, side_x + 3*mm, sm_y + sm_h - 6*mm,
-              "売上サマリー", font=FONT_B, size=11, color=DARK_ROSE)
+              "コース残回数アラート", font=FONT_B, size=11, color=ORANGE)
     draw_multiline(c, side_x + 3*mm, sm_y + sm_h - 9*mm,
-                   "今週: ¥128,500\n今月: ¥482,000\n前月比: +12%",
+                   "残り4回以下: 3名\n→ 次回来店時にご案内を",
                    font=FONT, size=10, color=BLACK, line_height=12)
     add_footer(c, 7)
 
@@ -674,8 +682,8 @@ def slide09(c):
     fill_rect(c, 0, 0, PAGE_W, PAGE_H, WHITE)
     add_title_bar(c, "オーナー体験3 売上レポート", 9)
     draw_text(c, 15*mm, PAGE_H - 38*mm,
-              "月別・日別の売上が、グラフで一目瞭然。CSVでダウンロードも可能。",
-              font=FONT, size=13, color=DARK_ROSE)
+              "月別・日別の売上が、グラフで一目瞭然。売上明細・顧客一覧・予約台帳はCSVでダウンロード可能（Excel対応）。",
+              font=FONT, size=11, color=DARK_ROSE)
     # 左：グラフ
     gx = 15*mm; gy = 18*mm
     gw = PAGE_W * 0.56
@@ -714,8 +722,8 @@ def slide09(c):
     cy = gy
     rounded(c, cx, cy, cwi, ch, 2*mm,
             fill_color=WHITE, stroke_color=GOLD, lw=1.5)
-    draw_text(c, cx + 4*mm, cy + ch - 7*mm, "支払い履歴ダウンロード",
-              font=FONT_B, size=12, color=DARK_ROSE)
+    draw_text(c, cx + 4*mm, cy + ch - 7*mm, "CSVダウンロード（売上／顧客／予約）",
+              font=FONT_B, size=11, color=DARK_ROSE)
     # テーブル
     headers = ["日付", "顧客", "金額"]
     tblx = cx + 3*mm
@@ -882,10 +890,10 @@ def slide11(c):
     draw_text(c, rx + 4*mm, ry + rh - 8*mm, "週次バックアップ",
               font=FONT_B, size=18, color=GOLD)
     draw_text(c, rx + 4*mm, ry + rh - 14*mm,
-              "毎週日曜5時、自動でデータを保管",
+              "毎週日曜 午前2時、自動でデータを保管",
               font=FONT, size=11, color=DARK_ROSE)
     # スケジュール
-    sched = [("日","5:00",True),("月","",False),("火","",False),
+    sched = [("日","2:00",True),("月","",False),("火","",False),
              ("水","",False),("木","",False),("金","",False),("土","",False)]
     sw = (rw - 16*mm) / 7
     sy = ry + rh - 35*mm
@@ -906,14 +914,14 @@ def slide11(c):
     rounded(c, rx + 6*mm, st_y, rw - 12*mm, 7*mm, 2*mm,
             fill_color=WHITE, stroke_color=GREEN, lw=1.5)
     draw_text_in_box(c, rx + 6*mm, st_y, rw - 12*mm, 7*mm,
-                     "[OK] 2026/04/19 05:00 バックアップ完了",
+                     "[OK] 2026/04/19 02:00 バックアップ完了",
                      font=FONT_B, size=11, color=GREEN,
                      align='center', valign='middle')
     # 効果
     eff2_y = ry + 5*mm; eff2_h = 18*mm
     rounded(c, rx + 6*mm, eff2_y, rw - 12*mm, eff2_h, 3*mm, fill_color=GOLD)
     draw_text_in_box(c, rx + 6*mm, eff2_y, rw - 12*mm, eff2_h,
-                     "データ消失の心配なし\nいつでも過去30日分から復元可能",
+                     "データ消失の心配なし\n過去4週間分を自動保管",
                      font=FONT_B, size=12, color=WHITE,
                      align='center', valign='middle')
     add_footer(c, 11)
@@ -927,13 +935,13 @@ def slide12(c):
               font=FONT, size=13, color=DARK_ROSE)
     items = [
         ("鍵", "パスワードはハッシュ化保存",
-         "万一データが見られても\nパスワードは復元不可能な\n形で保管されます。"),
-        ("暗号", "通信は暗号化",
-         "LINE・管理画面とサーバー間の\nすべての通信を暗号化。\n盗聴される心配はありません。"),
+         "SHA-256で不可逆変換して保存。\n万一データが見られても\nパスワードは復元不可能です。"),
+        ("暗号", "通信はすべて暗号化",
+         "LINE・管理画面とサーバー間の\n通信はHTTPSで暗号化。\n盗聴の心配はありません。"),
         ("ユーザ", "共有PCでも安心",
-         "ログイン情報は保存せず、\nブラウザを閉じれば自動ログアウト。\n店舗の共用PCでも使えます。"),
-        ("記録", "全操作ログ記録",
-         "「誰がいつ何をしたか」を\n自動で記録。\nトラブル時の追跡が可能です。"),
+         "ログイン情報の保存を選べる方式。\nOFFならブラウザを閉じた時点で\n自動ログアウトします。"),
+        ("記録", "操作履歴を自動記録",
+         "管理者ログイン履歴と\nLINEメッセージ送受信履歴を\n自動記録。後から確認できます。"),
     ]
     # 2x2 レイアウト
     card_w = (PAGE_W - 40*mm) / 2
@@ -1187,7 +1195,7 @@ def slide17(c):
         ("データはどこに保管されますか？",
          "Google社のクラウド（Googleドライブ）上に、オーナー様のアカウントで保管されます。データの所有権は完全にサロン様にあります。"),
         ("既存の顧客データはどうなりますか？",
-         "エクセル・CSVで書き出せる形式であれば、一括でインポートできます。移行作業は弊社で代行しますのでご安心ください。"),
+         "現時点では売上明細・顧客一覧・予約台帳のCSV出力に対応しています。他システムからのデータ移行は個別にご相談のうえ対応いたします。"),
         ("途中で解約したくなったら？",
          "データはそのまま保持され、サロン様のGoogleアカウントに残ります。いつでも内容を確認・ダウンロードしていただけます。"),
         ("月の予約件数に制限はありますか？",
