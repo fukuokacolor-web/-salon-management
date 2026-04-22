@@ -611,7 +611,7 @@ add_footer(s, 8)
 s = prs.slides.add_slide(BLANK); add_bg(s)
 add_title_bar(s, "オーナー体験③ 売上レポート", 9)
 add_text(s, Inches(0.6), Inches(1.3), Inches(12), Inches(0.5),
-         "月別・日別の売上が、グラフで一目瞭然。売上明細・顧客一覧・予約台帳はCSVでダウンロードできます（Excel対応）。",
+         "月別・日別の売上が、グラフで一目瞭然。売上明細・顧客一覧・予約台帳はCSVでダウンロード可能（Excel対応）。",
          size=14, color=DARK_ROSE)
 
 # 左：棒グラフ
