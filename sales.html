@@ -85,7 +85,8 @@
           <option value="6" selected>直近6ヶ月</option>
           <option value="12">直近12ヶ月</option>
         </select>
-        <button class="btn btn-outline" onclick="downloadSalesCsv()">📥 CSVダウンロード</button>
+        <input type="month" id="csvMonthInput" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.9rem;background:#fff;" title="CSV出力対象の月">
+        <button class="btn btn-outline" id="csvDownloadBtn" onclick="downloadSalesCsv()">📥 CSVダウンロード</button>
       </div>
     </div>
 
@@ -156,43 +157,56 @@
     return Number(n).toLocaleString('ja-JP');
   }
 
-  function downloadSalesCsv() {
-    if (!currentReport) {
-      alert('まだデータが読み込まれていません');
-      return;
+  async function downloadSalesCsv() {
+    const btn = document.getElementById('csvDownloadBtn');
+    const monthInput = document.getElementById('csvMonthInput');
+    // 未指定なら今月
+    let ym = (monthInput && monthInput.value) ? monthInput.value : csvCurrentMonthStr();
+    if (!/^\d{4}-\d{2}$/.test(ym)) ym = csvCurrentMonthStr();
+    const [y, m] = ym.split('-');
+
+    const originalLabel = btn ? btn.textContent : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '取得中...';
     }
-    const data = currentReport;
-    const headers = ['日付','顧客名','メニュー','金額','支払方法','備考'];
-    const rows = [];
-    const byMonth = data.byMonth || [];
-    // メニュー別×月別の集計を行として書き出す
-    for (const m of byMonth) {
-      const byMenu = m.byMenu || {};
-      const entries = Object.entries(byMenu);
-      if (entries.length === 0) continue;
-      for (const [menu, v] of entries) {
-        rows.push([
-          m.month,          // 日付（月単位）
-          '',               // 顧客名（集計データのため空欄）
-          menu || '（未設定）',
-          v.sales || 0,
-          '',               // 支払方法（集計データのため空欄）
-          `来店${v.visits || 0}件`,
-        ]);
+    try {
+      const data = await getSalesDetailForWeb(y, m);
+      if (!data) {
+        alert('売上明細の取得に失敗しました');
+        return;
+      }
+      const details = data.details || [];
+      const headers = ['日付','顧客名','メニュー','金額','支払方法','備考'];
+      const rows = details.map(d => [
+        d.date || '',
+        d.customerName || '',
+        d.menu || '',
+        Number(d.amount) || 0,
+        d.paymentMethod || '',
+        d.note || '',
+      ]);
+      // 合計行
+      const totalAmount = details.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+      rows.push([
+        '合計',
+        '',
+        '',
+        totalAmount,
+        '',
+        `明細${details.length}件`,
+      ]);
+      const fname = `売上_${ym}.csv`;
+      downloadCsv(fname, headers, rows);
+    } catch (err) {
+      console.error('downloadSalesCsv error:', err);
+      alert('売上明細の取得に失敗しました: ' + (err.message || err));
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = originalLabel || '📥 CSVダウンロード';
       }
     }
-    // 合計行
-    rows.push([
-      '合計',
-      '',
-      '',
-      data.totalSales || 0,
-      '',
-      `来店${data.totalVisits || 0}件`,
-    ]);
-    // 期間（表示中の月＝現在月）を基にファイル名
-    const fname = `売上_${csvCurrentMonthStr()}.csv`;
-    downloadCsv(fname, headers, rows);
   }
 
   async function loadReport() {
@@ -386,6 +400,12 @@
         </table>
       </div>`;
   }
+
+  // CSV出力の月入力は初期値として今月をセット
+  (function initCsvMonthInput() {
+    const el = document.getElementById('csvMonthInput');
+    if (el && !el.value) el.value = csvCurrentMonthStr();
+  })();
 
   loadReport();
 </script>

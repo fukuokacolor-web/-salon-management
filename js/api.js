@@ -101,6 +101,14 @@ async function getSalesReport(months = 6) {
   return apiGet('getSalesReport', { months: String(months) });
 }
 
+/** 指定月の売上明細（個別取引）取得 */
+async function getSalesDetailForWeb(year, month) {
+  return apiGet('getSalesDetailForWeb', {
+    year:  String(year),
+    month: String(month),
+  });
+}
+
 /** 定休日設定取得 */
 async function getClosedDays() {
   return apiGet('getClosedDays');
