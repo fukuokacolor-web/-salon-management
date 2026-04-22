@@ -12,6 +12,7 @@
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/csv.js"></script>
 </head>
 <body>
 <!-- 画面下部タブバー（スマホ専用） -->
@@ -101,6 +102,7 @@
         </div>
         <button class="btn btn-gold" onclick="applyFilters()">検索</button>
         <button class="btn btn-outline" onclick="resetSearch()">リセット</button>
+        <button class="btn btn-outline" onclick="downloadCustomersCsv()" style="margin-left:auto;">📥 CSVダウンロード</button>
       </div>
 
       <!-- 顧客テーブル -->
@@ -240,6 +242,32 @@
   function resetSearch() {
     document.getElementById('searchInput').value = '';
     applyFilters();
+  }
+
+  function downloadCustomersCsv() {
+    if (!allCustomers || allCustomers.length === 0) {
+      alert('ダウンロードする顧客データがありません');
+      return;
+    }
+    const headers = ['顧客ID','氏名','フリガナ','電話','メール','生年月日','来店回数','ポイント','コース残','登録日'];
+    const rows = allCustomers.map(c => {
+      const courseRemain = (c.plan === '回数コース')
+        ? `${c.courseRemaining}/${c.courseTotal}`
+        : '';
+      return [
+        c.customerId || '',
+        c.name || '',
+        c.kana || '',       // 現状データなし
+        c.phone || '',
+        c.email || '',      // 現状データなし
+        c.birthday || '',   // 現状データなし
+        c.visitCount || '', // 現状データなし
+        c.points ?? 0,
+        courseRemain,
+        csvFormatDate(c.createdAt),
+      ];
+    });
+    downloadCsv(`顧客一覧_${csvTodayStr()}.csv`, headers, rows);
   }
 
   async function loadCustomers() {

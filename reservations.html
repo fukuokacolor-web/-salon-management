@@ -12,6 +12,7 @@
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/csv.js"></script>
   <style>
     /* ── フィルタータブ ── */
     .filter-tabs {
@@ -283,6 +284,7 @@
       </div>
       <div class="header-right" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <div id="headerBadges" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+        <button class="btn btn-outline" onclick="downloadReservationsCsv()">📥 CSVダウンロード</button>
         <button class="btn-add-res" onclick="openAddModal()">＋ 新規予約</button>
       </div>
     </div>
@@ -555,6 +557,38 @@
           </tbody>
         </table>
       </div>`;
+  }
+
+  function getFilteredReservations() {
+    let list = allReservations;
+    if (hidingCancel) {
+      list = list.filter(r => r.status !== 'キャンセル');
+    }
+    if (currentFilter !== 'all') {
+      list = list.filter(r => r.status === currentFilter);
+    }
+    return list;
+  }
+
+  function downloadReservationsCsv() {
+    const list = getFilteredReservations();
+    if (!list || list.length === 0) {
+      alert('ダウンロードする予約データがありません');
+      return;
+    }
+    const headers = ['予約日時','顧客名','メニュー','ステータス','備考'];
+    const rows = list.map(r => {
+      const dt = `${r.date || ''}${r.time ? ' ' + r.time : ''}`;
+      return [
+        dt,
+        r.name || '',
+        r.menu || '',
+        r.status || '',
+        r.note || '', // 現状APIに備考なし
+      ];
+    });
+    const fname = `予約_${currentYear}-${String(currentMonth).padStart(2,'0')}.csv`;
+    downloadCsv(fname, headers, rows);
   }
 
   async function loadReservations() {

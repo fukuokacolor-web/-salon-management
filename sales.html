@@ -12,6 +12,7 @@
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/csv.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -84,6 +85,7 @@
           <option value="6" selected>直近6ヶ月</option>
           <option value="12">直近12ヶ月</option>
         </select>
+        <button class="btn btn-outline" onclick="downloadSalesCsv()">📥 CSVダウンロード</button>
       </div>
     </div>
 
@@ -148,9 +150,49 @@
   document.title = '売上レポート - ' + SALON_NAME;
 
   let barChart = null;
+  let currentReport = null;
 
   function fmt(n) {
     return Number(n).toLocaleString('ja-JP');
+  }
+
+  function downloadSalesCsv() {
+    if (!currentReport) {
+      alert('まだデータが読み込まれていません');
+      return;
+    }
+    const data = currentReport;
+    const headers = ['日付','顧客名','メニュー','金額','支払方法','備考'];
+    const rows = [];
+    const byMonth = data.byMonth || [];
+    // メニュー別×月別の集計を行として書き出す
+    for (const m of byMonth) {
+      const byMenu = m.byMenu || {};
+      const entries = Object.entries(byMenu);
+      if (entries.length === 0) continue;
+      for (const [menu, v] of entries) {
+        rows.push([
+          m.month,          // 日付（月単位）
+          '',               // 顧客名（集計データのため空欄）
+          menu || '（未設定）',
+          v.sales || 0,
+          '',               // 支払方法（集計データのため空欄）
+          `来店${v.visits || 0}件`,
+        ]);
+      }
+    }
+    // 合計行
+    rows.push([
+      '合計',
+      '',
+      '',
+      data.totalSales || 0,
+      '',
+      `来店${data.totalVisits || 0}件`,
+    ]);
+    // 期間（表示中の月＝現在月）を基にファイル名
+    const fname = `売上_${csvCurrentMonthStr()}.csv`;
+    downloadCsv(fname, headers, rows);
   }
 
   async function loadReport() {
@@ -170,8 +212,10 @@
     if (!data) {
       document.getElementById('chartArea').innerHTML =
         '<div class="empty-state"><p>データの取得に失敗しました</p></div>';
+      currentReport = null;
       return;
     }
+    currentReport = data;
 
     // サマリー
     document.getElementById('totalSales').textContent  = fmt(data.totalSales);
